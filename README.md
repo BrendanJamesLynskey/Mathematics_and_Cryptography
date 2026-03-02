@@ -22,7 +22,7 @@ Interactive slide decks covering modern cryptographic systems end-to-end — fro
 | 06 | Digital Signatures (ECDSA, EdDSA, Schnorr) | 25 | ✅ Complete |
 | 07 | Post-Quantum Cryptography | 21 | ✅ Complete |
 | 08 | Key Exchange Protocols | — | Planned |
-| 09 | Side-Channel Attacks & Countermeasures | — | Planned |
+| 09 | Side-Channel Attacks & Countermeasures | 22 | ✅ Complete |
 | 10 | Crypto Hardware Accelerator Design | 38 | ✅ Complete |
 
 
@@ -95,6 +95,30 @@ Interactive slide decks covering modern cryptographic systems end-to-end — fro
 
 ---
 
+## Presentation 09: Side-Channel Attacks & Countermeasures
+
+22 interactive slides covering:
+
+**Timing Attacks** — Kocher's 1996 timing attack fundamentals. Vulnerable vs. constant-time string comparison in C. Constant-time conditional select with branchless bitwise arithmetic. Rules for constant-time cryptographic code. The compiler optimisation problem and verification tools (ct-verif, dudect, timecop, Binsec/Rel).
+
+**Power Analysis** — CMOS dynamic power and the Hamming weight/distance models. Simple Power Analysis (SPA) with interactive RSA square-and-multiply trace visualisation. Differential Power Analysis (DPA) and Correlation Power Analysis (CPA) with animated correlation convergence demo. Template attacks and deep-learning SCA extensions (X-DeepSCA, cross-device single-trace attacks).
+
+**Electromagnetic Emanations** — Near-field EM probes, SEMA/DEMA/CEMA techniques. STELLAR countermeasure for lower-metal routing and current-domain signature attenuation (CDSA). Advantages over power analysis: spatial resolution, non-contact measurement, bypass of decoupling capacitors.
+
+**Cache & Microarchitectural Attacks** — AES T-table cache timing (Bernstein 2005). Flush+Reload, Prime+Probe, Evict+Time techniques. Spectre (Variant 1 bounds-check bypass, Variant 2 branch-target injection) and Meltdown (out-of-order execution, delayed exception handling). KPTI, retpoline, IBRS/IBPB, and DAWG mitigations.
+
+**Fault Injection** — Voltage glitching, clock glitching, EM fault injection, laser FI, and RowHammer with cost/practicality comparison. Differential Fault Analysis (DFA) on AES (Piret-Quisquater, 4 faults for full key) and RSA-CRT (Bellcore attack, single faulty signature). Software and hardware countermeasures including redundant computation, infection, and environmental sensors.
+
+**Countermeasures** — Boolean and arithmetic masking with Python masked-SubBytes example. Threshold Implementations (TI) with SystemVerilog AND-gate example and correctness/non-completeness/uniformity properties. DOM, HPC2/PINI, and AGEMA evolution. Hiding techniques: dual-rail logic (WDDL, SABL), shuffling, random delays, physical shielding with active mesh. Constant-time programming in practice (libsodium, BoringSSL, AES-NI). TVLA methodology with interactive t-test visualisation. RSA blinding, ECC scalar/point/projective coordinate blinding. Hardware-level SAH, on-die voltage regulators, active shield mesh, environmental sensors.
+
+**Cost of Protection** — Area (gate equivalents), throughput, randomness per encryption, and traces-to-break comparison table for unprotected vs. TI vs. DOM vs. shuffling+mask vs. SAH AES-128 implementations.
+
+**Case Studies** — EMV smart cards (DPA on DES/3DES), OpenSSL RSA cache timing (Bernstein/Percival 2005), TEMPEST/Van Eck phreaking, Spectre/Meltdown (2018), Plundervolt/VoltPillager (2019–21), ROCA Infineon TPM (2017). Defense-in-depth layered protection strategy across algorithm, software, hardware, and physical layers.
+
+**Interactive Demos** — SPA power trace canvas showing RSA key bit recovery from square/multiply amplitude patterns. Animated CPA correlation convergence showing correct key hypothesis separating from wrong guesses as trace count increases. TVLA t-test visualisation with ±4.5 threshold lines and leakage spike detection.
+
+---
+
 ## Presentation 10: Crypto Hardware Accelerator Design
 
 38 interactive slides covering:
@@ -128,6 +152,8 @@ Interactive slide decks covering modern cryptographic systems end-to-end — fro
 │   └── index.html                                ← Reveal.js interactive slide deck
 ├── 07-post-quantum-cryptography/
 │   └── index.html                                ← Reveal.js interactive slide deck
+├── 09-side-channel-attacks/
+│   └── index.html                                ← Reveal.js interactive slide deck
 └── 10-crypto-hardware-accelerator-design/
     └── index.html                                ← Reveal.js interactive slide deck
 ```
@@ -154,6 +180,8 @@ Each presentation is a single self-contained `index.html`. No build step, no npm
 **Presentation 06:** FIPS 186-5 (DSS) · FIPS 204 (ML-DSA) · FIPS 205 (SLH-DSA) · NIST SP 800-186 (ECC Curves) · RFC 6979 (Deterministic ECDSA) · RFC 8032 (EdDSA) · BIP 340 (Schnorr) · Johnson, Menezes, Vanstone, "The ECDSA" (2001) · Bernstein et al., "High-speed high-security signatures" (2011)
 
 **Presentation 07:** FIPS 203 (ML-KEM) · FIPS 204 (ML-DSA) · FIPS 205 (SLH-DSA) · NIST IR 8547 (PQC Transition) · SP 800-208 (LMS/XMSS) · Shor, "Polynomial-Time Algorithms for Prime Factorization" (1994) · Regev, "On Lattices, Learning with Errors" (2005) · Lyubashevsky, Peikert, Regev, "On Ideal Lattices and RLWE" (2010) · Bos et al., "CRYSTALS-Kyber" (2018) · Ducas et al., "CRYSTALS-Dilithium" (2018) · Bernstein et al., "The SPHINCS+ Signature Framework" (2019)
+
+**Presentation 09:** Kocher, "Timing Attacks on Implementations of DH, RSA, DSS" (1996) · Kocher, Jaffe & Jun, "Differential Power Analysis" (CRYPTO 1999) · Chari, Rao & Rohatgi, "Template Attacks" (CHES 2002) · Biham & Shamir, "Differential Fault Analysis" (1997) · Boneh, DeMillo & Lipton, "On the Importance of Checking Cryptographic Protocols for Faults" (1997) · Piret & Quisquater, "A DFA Technique Against SPN Structures" (2003) · Bernstein, "Cache-Timing Attacks on AES" (2005) · Kocher et al., "Spectre Attacks" (2018) · Lipp et al., "Meltdown" (2018) · Nikova, Rechberger & Rijmen, "Threshold Implementations" (2006) · ISW, "Private Circuits: Securing Hardware Against Probing Attacks" (2003) · Das & Sen, "EM and Power SCA: Advanced Attacks and Low-Overhead Countermeasures" (2020) · Schneider, Moradi & Güneysu, "Arithmetic Addition over Boolean Masking" (2015) · Goodwill et al., "TVLA — A Testing Methodology for SCA Resistance" (2011) · NIST SP 800-90B · FIPS 140-3 · Common Criteria ISO/IEC 15408
 
 **Presentation 10:** FIPS 197 (AES) · FIPS 202 (SHA-3) · FIPS 203 (ML-KEM) · FIPS 204 (ML-DSA) · FIPS 205 (SLH-DSA) · FIPS 140-3 (Crypto Module Security) · Canright, "A Very Compact Rijndael S-box" (CHES 2005) · Boyar & Peralta, "New Logic Minimization Techniques" (2010) · Kocher, Jaffe & Jun, "Differential Power Analysis" (CRYPTO 1999) · Montgomery, "Modular Multiplication Without Trial Division" (1985) · Hasan, "53 Gbps Composite-Field AES" (JSSC 2011) · Ouyang et al., "FalconSign" (TCHES 2025)
 

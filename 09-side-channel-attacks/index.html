@@ -1,0 +1,1331 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>09 — Side-Channel Attacks &amp; Countermeasures</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/black.min.css" id="theme" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/monokai.min.css" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --r-background-color: #0a0a0f;
+    --r-main-font: 'DM Sans', sans-serif;
+    --r-heading-font: 'Playfair Display', serif;
+    --r-code-font: 'JetBrains Mono', monospace;
+    --r-main-font-size: 28px;
+    --r-main-color: #d4d4d8;
+    --r-heading-color: #fafafa;
+    --r-link-color: #f87171;
+    --r-link-color-hover: #fca5a5;
+    --r-selection-background-color: #dc262660;
+    --accent: #ef4444;
+    --accent2: #f97316;
+    --accent3: #22d3ee;
+    --accent4: #a78bfa;
+    --success: #4ade80;
+    --warning: #facc15;
+    --dim: #71717a;
+    --surface: #18181b;
+    --surface2: #27272a;
+  }
+
+  .reveal { font-weight: 300; }
+  .reveal h1, .reveal h2, .reveal h3 { font-weight: 700; letter-spacing: -0.02em; line-height: 1.15; text-shadow: none; }
+  .reveal h1 { font-size: 2.2em; }
+  .reveal h2 { font-size: 1.5em; color: var(--accent); }
+  .reveal h3 { font-size: 1.1em; color: var(--accent3); font-family: var(--r-main-font); font-weight: 500; }
+  .reveal strong { color: #fafafa; font-weight: 700; }
+  .reveal em { color: var(--accent3); font-style: normal; }
+  .reveal code { font-family: var(--r-code-font); font-size: 0.85em; }
+  .reveal pre { width: 100%; font-size: 0.48em; box-shadow: 0 4px 30px rgba(0,0,0,.5); border: 1px solid #333; border-radius: 8px; }
+  .reveal pre code { max-height: 520px; padding: 16px; line-height: 1.45; }
+  .reveal ul, .reveal ol { display: block; text-align: left; margin-left: 1em; }
+  .reveal li { margin-bottom: 0.45em; line-height: 1.5; }
+  .reveal .slides section { padding: 20px 40px; }
+
+  /* --- custom classes --- */
+  .title-slide h1 { font-size: 2.6em; background: linear-gradient(135deg, #ef4444, #f97316, #ef4444); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .title-slide .subtitle { font-size: 0.75em; color: var(--dim); margin-top: -0.3em; font-weight: 300; }
+
+  .section-title { text-align: center; }
+  .section-title h2 { font-size: 2em; background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; margin-bottom: 0.3em; }
+  .section-title .section-num { font-family: var(--r-code-font); font-size: 0.65em; color: var(--dim); letter-spacing: 0.15em; text-transform: uppercase; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; text-align: left; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 24px; text-align: left; }
+
+  .card { background: var(--surface); border: 1px solid #333; border-radius: 10px; padding: 20px; }
+  .card h3 { margin-top: 0; margin-bottom: 0.4em; }
+  .card-accent { border-left: 3px solid var(--accent); }
+  .card-cyan { border-left: 3px solid var(--accent3); }
+  .card-purple { border-left: 3px solid var(--accent4); }
+  .card-green { border-left: 3px solid var(--success); }
+  .card-orange { border-left: 3px solid var(--accent2); }
+  .card-warn { border-left: 3px solid var(--warning); }
+
+  .tag { display: inline-block; font-family: var(--r-code-font); font-size: 0.55em; padding: 2px 10px; border-radius: 999px; background: #ffffff10; margin: 2px 3px; }
+  .tag-red { background: #ef444430; color: #fca5a5; }
+  .tag-green { background: #22c55e30; color: #86efac; }
+  .tag-blue { background: #3b82f630; color: #93c5fd; }
+  .tag-cyan { background: #06b6d430; color: #67e8f9; }
+  .tag-purple { background: #8b5cf630; color: #c4b5fd; }
+  .tag-orange { background: #f9731630; color: #fdba74; }
+  .tag-yellow { background: #eab30830; color: #fde68a; }
+
+  .small { font-size: 0.65em; color: var(--dim); }
+  .tiny { font-size: 0.5em; color: var(--dim); }
+  .mono { font-family: var(--r-code-font); }
+  .highlight { color: var(--accent); font-weight: 700; }
+  .cyan { color: var(--accent3); }
+  .green { color: var(--success); }
+  .orange { color: var(--accent2); }
+  .purple { color: var(--accent4); }
+  .yellow { color: var(--warning); }
+  .dim { color: var(--dim); }
+  .center { text-align: center; }
+
+  .taxonomy-table { width: 100%; border-collapse: collapse; font-size: 0.6em; }
+  .taxonomy-table th { background: var(--surface2); color: var(--accent3); text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--accent); font-weight: 500; }
+  .taxonomy-table td { padding: 7px 12px; border-bottom: 1px solid #333; vertical-align: top; }
+  .taxonomy-table tr:hover td { background: #ffffff06; }
+
+  .attack-flow { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: center; margin: 20px 0; }
+  .flow-box { background: var(--surface); border: 1px solid #444; border-radius: 8px; padding: 10px 18px; font-size: 0.7em; text-align: center; min-width: 100px; }
+  .flow-arrow { color: var(--accent); font-size: 1.4em; font-weight: 700; }
+
+  .equation-box { background: var(--surface); border: 1px solid #333; border-radius: 8px; padding: 15px 25px; font-family: var(--r-code-font); font-size: 0.75em; text-align: center; margin: 15px auto; display: inline-block; }
+
+  .power-trace { width: 100%; height: 120px; position: relative; margin: 10px 0; }
+  .trace-canvas { width: 100%; height: 100%; }
+
+  .timeline-bar { display: flex; gap: 0; width: 100%; height: 36px; border-radius: 6px; overflow: hidden; font-size: 0.5em; margin: 8px 0; }
+  .timeline-bar > div { display: flex; align-items: center; justify-content: center; font-weight: 500; }
+
+  .meter { width: 100%; height: 14px; background: var(--surface2); border-radius: 99px; overflow: hidden; margin: 4px 0; }
+  .meter-fill { height: 100%; border-radius: 99px; }
+
+  .icon-large { font-size: 2.5em; margin-bottom: 10px; }
+  .icon-medium { font-size: 1.6em; }
+
+  .quote-box { border-left: 3px solid var(--accent); padding: 12px 20px; font-style: italic; color: #a1a1aa; font-size: 0.8em; margin: 15px 0; }
+
+  .interactive-demo { background: var(--surface); border: 1px solid #333; border-radius: 10px; padding: 20px; margin: 10px 0; }
+  .demo-btn { background: var(--accent); color: white; border: none; border-radius: 6px; padding: 8px 18px; font-family: var(--r-main-font); font-size: 0.65em; cursor: pointer; margin: 4px; transition: 0.2s; }
+  .demo-btn:hover { filter: brightness(1.2); transform: translateY(-1px); }
+  .demo-btn.active { box-shadow: 0 0 12px rgba(239,68,68,0.5); }
+  .demo-output { font-family: var(--r-code-font); font-size: 0.55em; color: var(--accent3); margin-top: 10px; min-height: 60px; padding: 10px; background: #0a0a0f; border-radius: 6px; border: 1px solid #333; overflow-x: auto; }
+
+  @keyframes pulseGlow { 0%,100%{ box-shadow: 0 0 5px rgba(239,68,68,0.3); } 50%{ box-shadow: 0 0 20px rgba(239,68,68,0.6); } }
+  .glow { animation: pulseGlow 2s ease-in-out infinite; }
+
+  @keyframes scanline { 0% { transform: translateY(-100%); } 100% { transform: translateY(100vh); } }
+  .scanline-bg::before { content: ''; position: absolute; top: 0; left: 0; width: 100%; height: 2px; background: linear-gradient(90deg, transparent, var(--accent), transparent); animation: scanline 4s linear infinite; opacity: 0.15; pointer-events: none; z-index: 1; }
+</style>
+</head>
+<body>
+
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================================================ -->
+<!-- SLIDE 1: TITLE -->
+<!-- ============================================================ -->
+<section class="title-slide" data-background-gradient="radial-gradient(ellipse at 30% 50%, #1a0a0a 0%, #0a0a0f 70%)">
+  <p class="mono small" style="letter-spacing:0.2em; color:var(--dim);">PRESENTATION 09</p>
+  <h1>Side-Channel Attacks<br/>&amp; Countermeasures</h1>
+  <p class="subtitle">Timing · Power Analysis · EM Emanations · Cache Attacks · Fault Injection · Masking · Constant-Time Code</p>
+  <br/>
+  <p class="small">Modern Cryptography Series&emsp;·&emsp;Navigate with arrow keys or swipe</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 2: MOTIVATION -->
+<!-- ============================================================ -->
+<section>
+  <h2>Why Side Channels Matter</h2>
+  <div class="two-col">
+    <div>
+      <p>Cryptographic algorithms are <strong>mathematically secure</strong> — AES-256 resists 2<sup>256</sup> brute-force. But every implementation runs on <em>physical hardware</em> that leaks information through observable side effects.</p>
+      <br/>
+      <div class="card card-accent">
+        <h3>The Core Insight</h3>
+        <p class="small">Attackers don't break the <strong>math</strong>. They break the <strong>physics</strong>.</p>
+        <p class="small">A side channel is any observable physical quantity — time, power, EM radiation, sound, heat — that correlates with secret data processed inside a device.</p>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="text-align:center; margin-bottom:16px;">
+        <p class="icon-large">🔐</p>
+        <p class="small"><strong>Algorithm Security</strong><br/>AES-128: 2<sup>128</sup> operations<br/>≈ 10<sup>24</sup> years @ 10 GHz</p>
+      </div>
+      <div class="card card-accent glow" style="text-align:center;">
+        <p class="icon-large">⚡</p>
+        <p class="small"><strong>Side-Channel Attack</strong><br/>DPA on AES-128: 16 × 256 guesses<br/>≈ <span class="highlight">seconds</span> with an oscilloscope</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 3: TAXONOMY -->
+<!-- ============================================================ -->
+<section>
+  <h2>Taxonomy of Side-Channel Attacks</h2>
+  <table class="taxonomy-table">
+    <thead>
+      <tr><th>Channel</th><th>Observable</th><th>Access</th><th>Key Techniques</th><th>Cost</th></tr>
+    </thead>
+    <tbody>
+      <tr><td><strong class="cyan">Timing</strong></td><td>Execution time</td><td>Remote / Local</td><td>Cache timing, branch analysis</td><td><span class="tag tag-green">Low</span></td></tr>
+      <tr><td><strong class="orange">Power</strong></td><td>Current draw</td><td>Physical probe</td><td>SPA, DPA, CPA</td><td><span class="tag tag-yellow">Medium</span></td></tr>
+      <tr><td><strong class="purple">Electromagnetic</strong></td><td>EM radiation</td><td>Near-field probe</td><td>SEMA, DEMA, cross-device DL</td><td><span class="tag tag-yellow">Medium</span></td></tr>
+      <tr><td><strong>Acoustic</strong></td><td>Sound / vibration</td><td>Microphone</td><td>Coil whine, keyboard acoustics</td><td><span class="tag tag-green">Low</span></td></tr>
+      <tr><td><strong class="highlight">Cache / μArch</strong></td><td>Cache state</td><td>Co-located SW</td><td>Flush+Reload, Prime+Probe, Spectre</td><td><span class="tag tag-green">Low</span></td></tr>
+      <tr><td><strong class="yellow">Fault Injection</strong></td><td>Induced errors</td><td>Physical access</td><td>Voltage/clock glitch, laser, RowHammer</td><td><span class="tag tag-orange">Medium–High</span></td></tr>
+    </tbody>
+  </table>
+  <p class="small" style="margin-top:12px;">Classification: <strong>Passive</strong> (observe only) vs. <strong>Active</strong> (fault injection). <strong>Invasive</strong> (decap chip) vs. <strong>Non-invasive</strong> (external probes) vs. <strong>Semi-invasive</strong> (expose die, no contact).</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: TIMING ATTACKS -->
+<!-- ============================================================ -->
+<section class="section-title" data-background-gradient="radial-gradient(ellipse at 70% 30%, #1a1a0a 0%, #0a0a0f 70%)">
+  <p class="section-num">Section I</p>
+  <h2>Timing Attacks</h2>
+  <p class="dim">When execution time reveals your secrets</p>
+</section>
+
+<!-- SLIDE 4: TIMING BASICS -->
+<section>
+  <h2>Timing Attacks — Fundamentals</h2>
+  <div class="two-col">
+    <div>
+      <p>First described by <strong>Paul Kocher (1996)</strong>. If a cryptographic operation takes different amounts of time depending on the secret key, an attacker can <em>statistically recover</em> the key by measuring execution times.</p>
+      <br/>
+      <h3>Common Timing Leaks</h3>
+      <ul class="small">
+        <li><strong>Conditional branches</strong> on secret bits (if key_bit → multiply, else skip)</li>
+        <li><strong>Early-exit comparisons</strong> (memcmp returns at first mismatch)</li>
+        <li><strong>Data-dependent table lookups</strong> (cache hits vs. misses)</li>
+        <li><strong>Variable-time multiplication</strong> (leading zeros skip)</li>
+      </ul>
+    </div>
+    <div>
+      <h3>Classic: RSA Square-and-Multiply</h3>
+      <pre><code class="language-python"># VULNERABLE — timing leaks key bits
+def modexp_vulnerable(base, exp, mod):
+    result = 1
+    for i in range(exp.bit_length()-1, -1, -1):
+        result = (result * result) % mod   # always square
+        if (exp >> i) & 1:                 # branch on secret!
+            result = (result * base) % mod # multiply only if bit=1
+    return result
+# Multiply is ~2x slower than square-only
+# → attacker times each iteration
+# → recovers every bit of the exponent (secret key)</code></pre>
+      <div class="card card-green" style="margin-top:12px;">
+        <p class="small"><strong class="green">Fix:</strong> Always execute both operations — discard unwanted result via constant-time select.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 5: CONSTANT-TIME COMPARISON -->
+<section>
+  <h2>Constant-Time String Comparison</h2>
+  <div class="two-col">
+    <div>
+      <h3 style="color:var(--accent);">❌ Vulnerable (early-exit)</h3>
+      <pre><code class="language-c">// Standard memcmp — LEAKS position of first difference
+int memcmp(const void *a, const void *b, size_t n) {
+    const uint8_t *p = a, *q = b;
+    for (size_t i = 0; i < n; i++) {
+        if (p[i] != q[i])
+            return p[i] - q[i];  // exits early!
+    }
+    return 0;
+}
+// Timing reveals how many bytes match
+// → attacker brute-forces one byte at a time
+// → O(256 × n) instead of O(256^n)</code></pre>
+    </div>
+    <div>
+      <h3 style="color:var(--success);">✅ Constant-Time</h3>
+      <pre><code class="language-c">// Crypto-safe comparison — always same time
+int ct_memcmp(const void *a, const void *b, size_t n) {
+    const volatile uint8_t *p = a, *q = b;
+    uint8_t diff = 0;
+    for (size_t i = 0; i < n; i++) {
+        diff |= p[i] ^ q[i]; // accumulate diffs
+    }
+    // No early exit, no branch on secret data
+    return diff; // 0 if equal, nonzero otherwise
+}
+// Runs in exactly the same time regardless
+// of where (or whether) a mismatch occurs</code></pre>
+    </div>
+  </div>
+  <p class="small center" style="margin-top:10px;">Used in OpenSSL's <code>CRYPTO_memcmp()</code>, libsodium's <code>sodium_memcmp()</code>, and Go's <code>crypto/subtle.ConstantTimeCompare()</code>.</p>
+</section>
+
+<!-- SLIDE 6: CONSTANT-TIME CONDITIONAL SELECT -->
+<section>
+  <h2>Constant-Time Conditional Select</h2>
+  <p>Replace <em>every</em> secret-dependent branch with <strong>branchless bitwise arithmetic</strong>:</p>
+  <div class="two-col">
+    <div>
+      <h3 style="color:var(--accent);">❌ Branching on secret</h3>
+      <pre><code class="language-c">// Branch predictor leaks which path taken
+if (secret_bit) {
+    result = value_a;
+} else {
+    result = value_b;
+}</code></pre>
+    </div>
+    <div>
+      <h3 style="color:var(--success);">✅ Branchless select</h3>
+      <pre><code class="language-c">// Constant-time conditional select
+// mask = 0xFFFFFFFF if bit=1, 0x00000000 if bit=0
+uint32_t mask = -(uint32_t)secret_bit;
+result = (value_a & mask) | (value_b & ~mask);
+// Both values computed, correct one selected
+// No branch, no timing difference</code></pre>
+    </div>
+  </div>
+  <div class="card card-cyan" style="margin-top:16px;">
+    <h3>Rules for Constant-Time Cryptographic Code</h3>
+    <div class="three-col small">
+      <div>1. No secret-dependent <strong>branches</strong><br/>2. No secret-dependent <strong>memory indices</strong><br/>3. No secret-dependent <strong>loop bounds</strong></div>
+      <div>4. No variable-time <strong>arithmetic</strong> (div, mod)<br/>5. No early-exit <strong>comparisons</strong><br/>6. Avoid compiler <strong>optimizations</strong> that reintroduce branches</div>
+      <div>7. Verify with tools: <strong>ct-verif</strong>, <strong>dudect</strong>, <strong>timecop</strong><br/>8. Use <code>volatile</code> to prevent dead-code elimination<br/>9. Test on <em>actual target hardware</em></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: POWER ANALYSIS -->
+<!-- ============================================================ -->
+<section class="section-title" data-background-gradient="radial-gradient(ellipse at 30% 70%, #1a0a05 0%, #0a0a0f 70%)">
+  <p class="section-num">Section II</p>
+  <h2>Power Analysis Attacks</h2>
+  <p class="dim">Reading secrets from current consumption</p>
+</section>
+
+<!-- SLIDE 7: POWER FUNDAMENTALS -->
+<section>
+  <h2>Power Consumption in CMOS</h2>
+  <div class="two-col">
+    <div>
+      <p>In CMOS logic, <strong>dynamic power</strong> is consumed when transistors switch state. The power drawn by a gate depends on the <em>Hamming weight</em> and <em>Hamming distance</em> of the data it processes.</p>
+      <br/>
+      <div class="equation-box">
+        P<sub>dynamic</sub> = α · C<sub>L</sub> · V<sub>dd</sub>² · f
+      </div>
+      <p class="small" style="margin-top:12px;">where <strong>α</strong> = switching activity (data-dependent!), <strong>C<sub>L</sub></strong> = load capacitance, <strong>V<sub>dd</sub></strong> = supply voltage, <strong>f</strong> = clock frequency.</p>
+      <br/>
+      <div class="card card-accent">
+        <p class="small"><strong>Key insight:</strong> α changes with data values. Processing <code>0xFF</code> → <code>0x00</code> (8 bits flip) draws more power than <code>0xFF</code> → <code>0xFE</code> (1 bit flip). This creates a measurable correlation between <em>data</em> and <em>power</em>.</p>
+      </div>
+    </div>
+    <div>
+      <h3>Power Models</h3>
+      <div class="card" style="margin-bottom:12px;">
+        <h3>Hamming Weight Model</h3>
+        <p class="small">Power ∝ number of 1-bits in the value being processed.</p>
+        <div class="equation-box" style="font-size:0.65em;">P ≈ a · HW(v) + b + noise</div>
+        <p class="small">Best for: bus loads, register writes where prior state ≈ 0.</p>
+      </div>
+      <div class="card">
+        <h3>Hamming Distance Model</h3>
+        <p class="small">Power ∝ number of bit transitions between consecutive values.</p>
+        <div class="equation-box" style="font-size:0.65em;">P ≈ a · HD(v<sub>old</sub>, v<sub>new</sub>) + b + noise</div>
+        <p class="small">Best for: registers, data buses with known prior value.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 8: SPA -->
+<section>
+  <h2>Simple Power Analysis (SPA)</h2>
+  <div class="two-col">
+    <div>
+      <p>SPA extracts secrets by <strong>directly inspecting</strong> a single (or few) power traces. Different operations produce visually distinct power signatures.</p>
+      <br/>
+      <h3>RSA via SPA</h3>
+      <p class="small">Square-and-multiply RSA: a <strong>square</strong> operation has a shorter, lower-amplitude power pattern than a <strong>multiply</strong>. By reading the trace visually:</p>
+      <div style="font-family:var(--r-code-font); font-size:0.65em; margin:10px 0; color:var(--accent3);">
+        S M S S M S M S S S M ...<br/>
+        ↓ &nbsp;↓ &nbsp;↓ &nbsp;↓ &nbsp;↓ &nbsp;↓ &nbsp;↓ &nbsp;↓ &nbsp;↓ &nbsp;↓ &nbsp;↓<br/>
+        1 &nbsp;1 &nbsp;0 &nbsp;0 &nbsp;1 &nbsp;0 &nbsp;1 &nbsp;0 &nbsp;0 &nbsp;0 &nbsp;1 ...
+      </div>
+      <p class="small">Each multiply reveals a <code>1</code> bit; square-only reveals <code>0</code>. A single trace can recover a 2048-bit RSA private key.</p>
+    </div>
+    <div>
+      <h3>Simulated SPA Trace</h3>
+      <div class="interactive-demo">
+        <canvas id="spaCanvas" width="520" height="180" style="width:100%; background:#0a0a0f; border-radius:6px;"></canvas>
+        <p class="tiny" style="margin-top:6px;">Simulated RSA exponentiation power trace. <span class="cyan">S</span> = square, <span class="highlight">SM</span> = square + multiply. Key bits readable directly from amplitude pattern.</p>
+      </div>
+      <div class="card card-green" style="margin-top:10px;">
+        <h3>Countermeasure: Montgomery Ladder</h3>
+        <p class="small">Always perform <em>both</em> square and multiply, regardless of key bit. Identical operation sequence for 0 and 1 — SPA sees no difference.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 9: DPA -->
+<section>
+  <h2>Differential Power Analysis (DPA)</h2>
+  <p>Introduced by <strong>Paul Kocher, Joshua Jaffe, and Benjamin Jun (1999)</strong>. Uses <em>statistical analysis</em> across many traces to extract keys even when individual traces are noisy.</p>
+  <div class="attack-flow">
+    <div class="flow-box">1. Collect <em>N</em><br/>power traces<br/><span class="tiny">N ≈ 1,000–50,000</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">2. Guess a key<br/>sub-byte<br/><span class="tiny">256 hypotheses</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">3. Predict power<br/>for each guess<br/><span class="tiny">HW/HD model</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box">4. Correlate<br/>prediction vs. trace<br/><span class="tiny">Pearson ρ</span></div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-box" style="border-color:var(--accent);">5. Correct guess<br/>= highest ρ<br/><span class="tiny" style="color:var(--accent);">KEY RECOVERED</span></div>
+  </div>
+  <div class="two-col" style="margin-top:16px;">
+    <div class="card card-accent">
+      <h3>AES Key Recovery — The Attack</h3>
+      <p class="small">Target: output of first-round SubBytes, <code>S[p[i] ⊕ k[i]]</code>. For each key byte hypothesis <em>k*</em>, compute HW of <code>S[p[i] ⊕ k*]</code> for all traces. Correlate against measured power at the SubBytes clock cycle. The correct <em>k*</em> yields the highest Pearson correlation. Repeat for all 16 bytes → full 128-bit key in <strong>16 × 256 = 4,096</strong> correlation tests.</p>
+    </div>
+    <div class="card card-cyan">
+      <h3>Correlation Power Analysis (CPA)</h3>
+      <p class="small">Refinement of DPA using Pearson correlation coefficient instead of difference-of-means. More statistically efficient — requires fewer traces. Standard attack methodology today.</p>
+      <div class="equation-box" style="font-size:0.55em; margin-top:8px;">
+        ρ(t, k*) = Cov(H<sub>k*</sub>, T<sub>t</sub>) / (σ<sub>H</sub> · σ<sub>T</sub>)
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 10: DPA INTERACTIVE -->
+<section>
+  <h2>DPA / CPA — Interactive Demonstration</h2>
+  <div class="interactive-demo">
+    <p class="small">Simulated CPA correlation traces for an AES-128 SubBytes attack. Click "Run CPA" to see how the correct key byte (hypothesis <span class="cyan">0xAB</span>) rises above the wrong guesses as trace count increases.</p>
+    <div style="display:flex; gap:10px; align-items:center; margin:10px 0;">
+      <button class="demo-btn" onclick="runCPA()">▶ Run CPA</button>
+      <button class="demo-btn" onclick="resetCPA()" style="background:var(--surface2);">Reset</button>
+      <span class="mono small" id="cpaStatus" style="color:var(--dim);">Ready — click Run CPA</span>
+    </div>
+    <canvas id="cpaCanvas" width="600" height="200" style="width:100%; background:#0a0a0f; border-radius:6px; border:1px solid #333;"></canvas>
+    <p class="tiny" style="margin-top:6px;"><span class="cyan">Cyan</span> = correct key hypothesis (0xAB). <span class="dim">Grey</span> = wrong hypotheses (sample of 20). X-axis = number of traces. Y-axis = |Pearson ρ|.</p>
+  </div>
+</section>
+
+<!-- SLIDE 11: TEMPLATE ATTACKS -->
+<section>
+  <h2>Template Attacks</h2>
+  <div class="two-col">
+    <div>
+      <p>The <strong>most powerful</strong> form of profiled side-channel attack (Chari et al., 2002). Given access to an identical <em>template device</em>, an attacker can build a statistical model and then break a target device with as few as <strong>a single trace</strong>.</p>
+      <br/>
+      <h3>Two-Phase Process</h3>
+      <div class="card card-purple" style="margin-bottom:12px;">
+        <h3>Phase 1: Profiling</h3>
+        <p class="small">On a device you control, run encryptions with <em>known</em> keys. For each key byte value, record many traces and compute the multivariate Gaussian distribution (mean vector μ, covariance matrix Σ) of the power at selected "points of interest."</p>
+      </div>
+      <div class="card card-accent">
+        <h3>Phase 2: Matching</h3>
+        <p class="small">Capture trace(s) from the <em>target</em> device. Evaluate the log-likelihood of each template. The key hypothesis with maximum likelihood is the recovered key.</p>
+      </div>
+    </div>
+    <div>
+      <h3>Mathematical Model</h3>
+      <div class="equation-box" style="font-size:0.58em;">
+        P(trace | key = k) = N(μ<sub>k</sub>, Σ<sub>k</sub>)
+      </div>
+      <div class="equation-box" style="font-size:0.58em; margin-top:8px;">
+        k* = argmax<sub>k</sub> log P(trace | key = k)
+      </div>
+      <br/>
+      <h3>Deep Learning Extensions</h3>
+      <p class="small">Modern attacks replace the Gaussian template with <strong>neural networks</strong> (CNNs, MLPs). Benefits:</p>
+      <ul class="small">
+        <li>No need to manually select points of interest</li>
+        <li>Handle misaligned traces (jitter) automatically</li>
+        <li><strong>Cross-device attacks</strong>: train on device A, attack device B — demonstrated to succeed in as few as a single trace</li>
+        <li>Effective even against first-order masking</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: EM ATTACKS -->
+<!-- ============================================================ -->
+<section class="section-title" data-background-gradient="radial-gradient(ellipse at 60% 40%, #0a0a1a 0%, #0a0a0f 70%)">
+  <p class="section-num">Section III</p>
+  <h2>Electromagnetic Emanations</h2>
+  <p class="dim">Secrets broadcast over the air</p>
+</section>
+
+<!-- SLIDE 12: EM ATTACKS -->
+<section>
+  <h2>Electromagnetic Side-Channel Attacks</h2>
+  <div class="two-col">
+    <div>
+      <p>Current flow in IC wires produces <strong>electromagnetic radiation</strong>. A near-field EM probe (loop antenna, 50–500 μm) placed near the chip surface can capture signals that correlate with internal data processing.</p>
+      <br/>
+      <h3>Advantages Over Power Analysis</h3>
+      <ul class="small">
+        <li><strong>Spatial resolution</strong> — probe individual circuit blocks, not just global power rail</li>
+        <li><strong>Non-contact</strong> — no need to modify power supply lines</li>
+        <li><strong>Bypass decoupling capacitors</strong> — EM radiates directly from die, unfiltered</li>
+        <li><strong>Works through packaging</strong> — even epoxy-encapsulated chips</li>
+      </ul>
+      <br/>
+      <div class="card card-purple">
+        <p class="small"><strong>SEMA</strong> = Simple EM Analysis (like SPA). <strong>DEMA</strong> = Differential EM Analysis (like DPA). <strong>CEMA</strong> = Correlation EM Analysis (like CPA). Same statistical techniques, different physical observable.</p>
+      </div>
+    </div>
+    <div>
+      <h3>Attack Setup</h3>
+      <div class="card" style="text-align:center; margin-bottom:14px;">
+        <p style="font-size:0.7em;">
+          📡 &nbsp;<strong>EM Probe</strong>&emsp;→&emsp;🔧 <strong>LNA</strong>&emsp;→&emsp;📊 <strong>Oscilloscope</strong>&emsp;→&emsp;💻 <strong>CPA Software</strong>
+        </p>
+        <p class="tiny">Near-field H-probe → Low-noise amplifier → High-speed ADC → Statistical analysis</p>
+      </div>
+      <h3>STELLAR Countermeasure</h3>
+      <p class="small">Route the crypto core exclusively within <strong>lower metal layers</strong> (M1–M4), then surround it with a <em>Current-Domain Signature Attenuation</em> (CDSA) shield in upper metals. The correlated EM signature is suppressed by 100–1000× before reaching the chip surface.</p>
+      <br/>
+      <h3>Cross-Device Deep Learning (X-DeepSCA)</h3>
+      <p class="small">Train a CNN on EM traces from Device A, attack Device B — same architecture, different manufacturing lot. Demonstrated to extract AES-256 keys with practical trace counts, proving device-specific noise is not a reliable defense.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: CACHE / MICROARCH -->
+<!-- ============================================================ -->
+<section class="section-title" data-background-gradient="radial-gradient(ellipse at 40% 60%, #0a1a0a 0%, #0a0a0f 70%)">
+  <p class="section-num">Section IV</p>
+  <h2>Cache &amp; Microarchitectural Attacks</h2>
+  <p class="dim">Software-only side channels — no oscilloscope required</p>
+</section>
+
+<!-- SLIDE 13: CACHE ATTACKS -->
+<section>
+  <h2>Cache Timing Attacks</h2>
+  <div class="two-col">
+    <div>
+      <p>Modern CPUs use <strong>multi-level caches</strong> (L1: ~1 ns, L2: ~5 ns, L3: ~15 ns, DRAM: ~60 ns). These timing differences are a side channel when crypto code performs <em>secret-dependent memory accesses</em>.</p>
+      <br/>
+      <h3>AES T-Table Attack (Bernstein 2005)</h3>
+      <p class="small">Standard AES implementations use <strong>lookup tables</strong> (T-tables, 4 × 1 KB). The index into each table depends on <code>plaintext ⊕ key</code>. An attacker on the same machine measures <em>which cache lines were accessed</em>, revealing which table entries were used, directly leaking key-dependent information.</p>
+      <div class="equation-box" style="font-size:0.55em; margin-top:10px;">
+        T-table index = S-box[p<sub>i</sub> ⊕ k<sub>i</sub>]
+        <br/>cache line = index >> 4 → leaks 4 MSBs of (p<sub>i</sub> ⊕ k<sub>i</sub>)
+      </div>
+    </div>
+    <div>
+      <h3>Major Cache Attack Techniques</h3>
+      <div class="card" style="margin-bottom:10px;">
+        <h3>Flush+Reload</h3>
+        <p class="small"><strong>Shared memory required.</strong> Attacker flushes a cache line, waits for victim, then reloads — fast reload = victim accessed it. Granularity: cache line (64 bytes).</p>
+      </div>
+      <div class="card" style="margin-bottom:10px;">
+        <h3>Prime+Probe</h3>
+        <p class="small"><strong>No shared memory needed.</strong> Attacker fills cache set with own data, waits, then re-accesses — slow access = victim evicted a line. Works across VMs on shared L3.</p>
+      </div>
+      <div class="card">
+        <h3>Evict+Time</h3>
+        <p class="small">Evict specific cache sets, time victim's total execution. Variation in time reveals which sets victim accesses.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 14: SPECTRE / MELTDOWN -->
+<section>
+  <h2>Spectre &amp; Meltdown</h2>
+  <div class="two-col">
+    <div>
+      <h3 style="color:var(--accent);">Spectre (2018)</h3>
+      <p class="small">Exploits <strong>speculative execution</strong> and <strong>branch prediction</strong>. The CPU speculatively executes instructions beyond a branch before the condition is resolved. Even though results are rolled back architecturally, <em>cache state changes persist</em> and are observable via timing.</p>
+      <div class="card card-accent" style="margin-top:10px;">
+        <p class="small"><strong>Variant 1</strong> (Bounds Check Bypass): Trick victim into speculatively accessing out-of-bounds memory → data encoded into cache → Flush+Reload to read it.</p>
+        <p class="small"><strong>Variant 2</strong> (Branch Target Injection): Poison branch predictor to redirect speculative execution to attacker-chosen gadget.</p>
+      </div>
+    </div>
+    <div>
+      <h3 style="color:var(--accent2);">Meltdown (2018)</h3>
+      <p class="small">Exploits <strong>out-of-order execution</strong> with <strong>delayed exception handling</strong>. CPU executes a kernel memory read before the privilege check completes. The data reaches the cache before the fault is raised.</p>
+      <div class="card card-orange" style="margin-top:10px;">
+        <p class="small"><strong>Impact:</strong> Read arbitrary kernel memory from userspace. All kernel address space — including every process's passwords, keys, and secrets — accessible to any unprivileged process.</p>
+      </div>
+      <br/>
+      <h3>Mitigations</h3>
+      <p class="small"><strong>KPTI</strong> (unmap kernel pages), <strong>retpoline</strong> (replace indirect branches), <strong>IBRS/IBPB</strong> (hardware predictor barriers), <strong>DAWG</strong> (cache partitioning), microcode patches. Performance cost: 5–30% on some workloads.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: FAULT INJECTION -->
+<!-- ============================================================ -->
+<section class="section-title" data-background-gradient="radial-gradient(ellipse at 50% 50%, #1a0a10 0%, #0a0a0f 70%)">
+  <p class="section-num">Section V</p>
+  <h2>Fault Injection Attacks</h2>
+  <p class="dim">Active attacks — inducing errors to extract secrets</p>
+</section>
+
+<!-- SLIDE 15: FAULT INJECTION OVERVIEW -->
+<section>
+  <h2>Fault Injection — Methods</h2>
+  <div class="three-col">
+    <div class="card card-accent">
+      <p class="icon-medium">⚡</p>
+      <h3>Voltage Glitching</h3>
+      <p class="small">Briefly drop/spike V<sub>dd</sub> to violate setup/hold timing. Causes bit flips in registers or skipped instructions. Cost: <strong>&lt; $100</strong> (ChipWhisperer). Requires removal of decoupling capacitors for best results.</p>
+      <div class="meter"><div class="meter-fill" style="width:90%; background:var(--accent);"></div></div>
+      <p class="tiny">Practicality: Very High</p>
+    </div>
+    <div class="card card-orange">
+      <p class="icon-medium">🕐</p>
+      <h3>Clock Glitching</h3>
+      <p class="small">Insert an extra short clock pulse or shorten a cycle. CPU reads register before stable — causes computation errors. Cost: <strong>&lt; $200</strong>. Temporal precision ~0.17 ns achievable on FPGA-based injectors.</p>
+      <div class="meter"><div class="meter-fill" style="width:85%; background:var(--accent2);"></div></div>
+      <p class="tiny">Practicality: Very High</p>
+    </div>
+    <div class="card card-purple">
+      <p class="icon-medium">📡</p>
+      <h3>EM Fault Injection</h3>
+      <p class="small">High-current EM pulse from a coil induces local currents in the die. Combines spatial targeting with moderate cost. Does not require board modification. Cost: <strong>~$1–5K</strong>.</p>
+      <div class="meter"><div class="meter-fill" style="width:70%; background:var(--accent4);"></div></div>
+      <p class="tiny">Practicality: High</p>
+    </div>
+  </div>
+  <div class="two-col" style="margin-top:16px;">
+    <div class="card card-cyan">
+      <p class="icon-medium">💥</p>
+      <h3>Laser Fault Injection</h3>
+      <p class="small">IR laser focused on exposed die creates electron-hole pairs → bit flips in SRAM/logic. Highest precision (single-transistor targeting). Requires chip decapsulation. Cost: <strong>$30–100K</strong>.</p>
+    </div>
+    <div class="card card-warn">
+      <p class="icon-medium">🔨</p>
+      <h3>RowHammer (Software FI)</h3>
+      <p class="small">Repeated DRAM row activations cause charge leakage in adjacent cells → bit flips. <strong>No physical access needed</strong> — purely software. Demonstrated: privilege escalation, TLS key extraction, VM escape. Affects DDR3/DDR4; mitigations in DDR5 (TRR) partially bypassable.</p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 16: DFA -->
+<section>
+  <h2>Differential Fault Analysis (DFA)</h2>
+  <div class="two-col">
+    <div>
+      <p>Introduced by <strong>Biham & Shamir (1997)</strong>. Inject a fault during encryption, then compare the <em>correct</em> and <em>faulty</em> ciphertexts. The difference reveals information about the secret key.</p>
+      <br/>
+      <h3>DFA on AES — Piret & Quisquater (2003)</h3>
+      <p class="small">Inject a <strong>single-byte fault</strong> at the input of round 8 MixColumns. This fault propagates through rounds 9 and 10, affecting 4 bytes of ciphertext. By analyzing the difference between correct and faulty outputs:</p>
+      <ul class="small">
+        <li>One faulty ciphertext yields ~2<sup>8</sup> possible key hypotheses for 4 key bytes</li>
+        <li>Two faults at different positions → unique 32-bit key fragment</li>
+        <li><strong>2 fault pairs (4 total faults)</strong> → complete AES-128 round key → full key via key schedule inversion</li>
+      </ul>
+    </div>
+    <div>
+      <h3>DFA on RSA-CRT</h3>
+      <p class="small"><strong>Bellcore Attack</strong> (Boneh et al., 1997): If RSA uses CRT and a fault occurs in one of the two modular exponentiations:</p>
+      <div class="equation-box" style="font-size:0.55em;">
+        ŝ = correct mod p, faulty mod q<br/>
+        gcd(ŝ<sup>e</sup> − m, N) = p → factorization of N!
+      </div>
+      <p class="small" style="margin-top:12px;">A <strong>single faulty signature</strong> completely breaks RSA. This is why RSA-CRT implementations must verify signatures before output.</p>
+      <br/>
+      <h3>Countermeasures</h3>
+      <div class="card card-green">
+        <p class="small">• <strong>Redundant computation</strong> — compute twice, compare results<br/>
+        • <strong>Infection</strong> — if fault detected, corrupt output completely<br/>
+        • <strong>Temporal redundancy</strong> — re-execute and compare<br/>
+        • <strong>Error-detecting codes</strong> — parity/CRC on intermediate values<br/>
+        • <strong>Environmental sensors</strong> — voltage, clock, temperature monitors</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: COUNTERMEASURES -->
+<!-- ============================================================ -->
+<section class="section-title" data-background-gradient="radial-gradient(ellipse at 50% 30%, #0a1a0a 0%, #0a0a0f 70%)">
+  <p class="section-num">Section VI</p>
+  <h2>Countermeasures</h2>
+  <p class="dim">Defending implementations against physical leakage</p>
+</section>
+
+<!-- SLIDE 17: MASKING -->
+<section>
+  <h2>Masking — The Primary Algorithmic Defense</h2>
+  <div class="two-col">
+    <div>
+      <p>Masking splits every sensitive intermediate value into <em>d+1 random shares</em>. Each share is statistically independent of the secret. An attacker must combine information from <strong>all shares simultaneously</strong> to learn anything — requiring (d+1)<sup>th</sup>-order analysis.</p>
+      <br/>
+      <h3>Boolean Masking</h3>
+      <div class="equation-box" style="font-size:0.6em;">
+        x = x₀ ⊕ x₁ ⊕ ... ⊕ x<sub>d</sub>
+      </div>
+      <p class="small" style="margin-top:8px;">Each share x<sub>i</sub> (for i &gt; 0) is uniformly random. x₀ = x ⊕ x₁ ⊕ ... ⊕ x<sub>d</sub>. Any strict subset of shares is uniformly distributed — reveals <strong>zero information</strong> about x.</p>
+      <br/>
+      <h3>Arithmetic Masking</h3>
+      <div class="equation-box" style="font-size:0.6em;">
+        x = x₀ + x₁ + ... + x<sub>d</sub>&emsp;(mod 2<sup>n</sup>)
+      </div>
+      <p class="small" style="margin-top:8px;">Used for ARX ciphers (SPECK, ChaCha20). Converting between Boolean and arithmetic masking requires dedicated secure algorithms.</p>
+    </div>
+    <div>
+      <h3>Masking AES SubBytes</h3>
+      <pre><code class="language-python"># First-order masked SubBytes (d=1)
+def masked_subbytes(x0, x1):
+    """x = x0 ⊕ x1 (true value)"""
+    # Re-mask: generate fresh mask
+    r = random_byte()
+    # Pre-compute masked S-box table
+    # S'[a] = S[a ⊕ x1] ⊕ r  (for all a)
+    masked_sbox = [sbox[a ^ x1] ^ r
+                   for a in range(256)]
+    # Apply: lookup with share x0
+    y0 = masked_sbox[x0]
+    y1 = r  # new mask
+    # Now y0 ⊕ y1 = S[x0 ⊕ x1] = S[x]
+    return y0, y1</code></pre>
+      <div class="card card-warn" style="margin-top:10px;">
+        <h3>Security vs. Order</h3>
+        <p class="small">d<sup>th</sup>-order masking protects against attacks combining up to d intermediate values. Cost grows as <strong>O(d²)</strong> in computation and <strong>O(d)</strong> in randomness. Typical: d=1 (first-order) for smart cards, d=2–3 for high-assurance.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 18: THRESHOLD IMPLEMENTATIONS -->
+<section>
+  <h2>Threshold Implementations (TI)</h2>
+  <div class="two-col">
+    <div>
+      <p>Masking in hardware must handle <strong>glitches</strong> — transient signal transitions that can combine shares within a single clock cycle, leaking information even if the steady-state design is secure.</p>
+      <br/>
+      <h3>TI Properties (Nikova, Rechberger, Rijmen 2006)</h3>
+      <div class="card card-cyan" style="margin-bottom:10px;">
+        <h3>1. Correctness</h3>
+        <p class="small">Combining output shares yields the correct function output.</p>
+      </div>
+      <div class="card card-cyan" style="margin-bottom:10px;">
+        <h3>2. Non-Completeness</h3>
+        <p class="small">Each output share depends on <em>at most d</em> input shares (i.e., at least one share is missing from every output computation). This ensures glitches within a single combinational block cannot recombine all shares.</p>
+      </div>
+      <div class="card card-cyan">
+        <h3>3. Uniformity</h3>
+        <p class="small">Output shares are uniformly distributed if input shares are. Required for composability of multiple TI stages.</p>
+      </div>
+    </div>
+    <div>
+      <h3>TI-Protected AND Gate (d=1, 3 shares)</h3>
+      <pre><code class="language-verilog">// Inputs: a = (a0, a1, a2), b = (b0, b1, b2)
+// where a = a0 ⊕ a1 ⊕ a2, b = b0 ⊕ b1 ⊕ b2
+// Output shares of c = a AND b:
+
+assign c0 = (a0 & b0) ^ (a0 & b1) ^ (a1 & b0);
+assign c1 = (a1 & b1) ^ (a1 & b2) ^ (a2 & b1);
+assign c2 = (a2 & b2) ^ (a2 & b0) ^ (a0 & b2);
+// c0 ⊕ c1 ⊕ c2 = a & b  ✓
+// Each c_i depends on only 2 of 3 input shares ✓
+// Non-completeness: c0 has no a2,b2 etc.</code></pre>
+      <h3 style="margin-top:16px;">Evolution</h3>
+      <ul class="small">
+        <li><strong>TI</strong> → first-order glitch-resistant, limited to low algebraic degree</li>
+        <li><strong>DOM</strong> (Domain-Oriented Masking) → arbitrary order, less area/randomness than TI</li>
+        <li><strong>HPC2 / PINI</strong> → provably composable at arbitrary order, multivariate secure</li>
+        <li><strong>AGEMA</strong> → automated tool to convert unprotected HDL → masked implementation</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 19: HIDING -->
+<section>
+  <h2>Hiding Countermeasures</h2>
+  <p>Instead of removing the correlation (masking), <strong>hiding</strong> makes the leakage harder to exploit by adding noise or randomizing timing.</p>
+  <div class="three-col">
+    <div class="card card-accent">
+      <h3>Amplitude Hiding</h3>
+      <ul class="small">
+        <li><strong>Dual-rail logic</strong> (WDDL, SABL): every gate computes both f and f̄ — power is constant regardless of data</li>
+        <li><strong>Current flattening</strong>: on-chip voltage regulator with fast feedback loop to suppress data-dependent current variations</li>
+        <li><strong>Decoupling & filtering</strong>: large on-die capacitors smooth supply current</li>
+        <li><strong>CDSA / ASNI</strong>: signature attenuation hardware embeds crypto core, suppresses correlated signal at power/EM ports</li>
+      </ul>
+    </div>
+    <div class="card card-cyan">
+      <h3>Temporal Hiding</h3>
+      <ul class="small">
+        <li><strong>Random delays</strong>: insert variable-length dummy operations between rounds (degrades alignment of traces)</li>
+        <li><strong>Shuffling</strong>: randomize execution order of independent operations (e.g., AES processes 16 S-boxes in random order each encryption)</li>
+        <li><strong>Random clock jitter</strong>: hardware clock with random frequency variation</li>
+        <li>Attacker can counter with <em>trace alignment</em> algorithms — works best combined with masking</li>
+      </ul>
+    </div>
+    <div class="card card-purple">
+      <h3>Physical Shielding</h3>
+      <ul class="small">
+        <li><strong>Active mesh / shield</strong>: metal layers carrying random signals over the crypto core; tampering breaks the mesh → device zeroizes</li>
+        <li><strong>EM shielding</strong>: Faraday cage, on-chip shield metals routed above sensitive logic</li>
+        <li><strong>Tamper-detect sensors</strong>: voltage, temperature, light, laser detectors that trigger key erasure</li>
+        <li>Used in: smart cards (EMV), HSMs, military crypto</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 20: CONSTANT-TIME IN PRACTICE -->
+<section>
+  <h2>Constant-Time Programming in Practice</h2>
+  <div class="two-col">
+    <div>
+      <h3>The Compiler Problem</h3>
+      <p class="small">You write constant-time C. The compiler "optimizes" it back into branching code. This is a fundamental tension — compilers are designed to make code <em>fast</em>, not <em>constant-time</em>.</p>
+      <pre><code class="language-c">// You write:
+uint32_t mask = -(uint32_t)(a == b);
+result = old ^ (mask & (old ^ new_val));
+
+// Compiler may emit:
+//   CMP a, b
+//   JNE skip      ← branch reintroduced!
+//   MOV result, new_val
+// skip:</code></pre>
+      <h3 style="margin-top:14px;">Defenses</h3>
+      <ul class="small">
+        <li>Use <code>volatile</code> to prevent optimization</li>
+        <li>Write in assembly for critical paths</li>
+        <li>Use <code>-O0</code> or specific compiler barriers</li>
+        <li>Verify final binary with tools like <strong>ct-verif</strong>, <strong>Binsec/Rel</strong></li>
+      </ul>
+    </div>
+    <div>
+      <h3>Libraries That Get It Right</h3>
+      <div class="card" style="margin-bottom:10px;">
+        <p class="small"><strong>libsodium / NaCl</strong> — Designed constant-time from the ground up. Curve25519 in 32-bit arithmetic, no table lookups, no secret-dependent branches.</p>
+      </div>
+      <div class="card" style="margin-bottom:10px;">
+        <p class="small"><strong>OpenSSL (post-2014)</strong> — Constant-time BN operations, bitsliced AES, blinded RSA. Legacy codepaths still occasionally vulnerable.</p>
+      </div>
+      <div class="card" style="margin-bottom:10px;">
+        <p class="small"><strong>BoringSSL</strong> — Google's fork with aggressive constant-time discipline. All crypto ops verified.</p>
+      </div>
+      <div class="card">
+        <p class="small"><strong>AES-NI</strong> — Intel hardware AES instructions are inherently constant-time (no table lookups, fixed latency). Eliminates cache-timing attacks on AES entirely.</p>
+      </div>
+      <br/>
+      <h3>Verification Tools</h3>
+      <p class="small"><span class="tag tag-cyan">ct-verif</span> <span class="tag tag-cyan">dudect</span> <span class="tag tag-cyan">timecop</span> <span class="tag tag-cyan">Binsec/Rel</span> <span class="tag tag-cyan">CacheAudit</span> <span class="tag tag-cyan">ct-wasm</span></p>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 21: TVLA -->
+<section>
+  <h2>Test Vector Leakage Assessment (TVLA)</h2>
+  <div class="two-col">
+    <div>
+      <p><strong>TVLA</strong> (Goodwill et al., 2011) is a standardized methodology to detect whether a device leaks side-channel information — <em>without</em> performing a full key-recovery attack.</p>
+      <br/>
+      <h3>The t-Test Approach</h3>
+      <p class="small">Collect two sets of power traces:</p>
+      <ul class="small">
+        <li><strong>Set A</strong>: encrypt a <em>fixed</em> plaintext repeatedly</li>
+        <li><strong>Set B</strong>: encrypt <em>random</em> plaintexts</li>
+      </ul>
+      <p class="small">At each time sample, compute Welch's t-statistic between Set A and Set B.</p>
+      <div class="equation-box" style="font-size:0.55em; margin-top:10px;">
+        t = (μ<sub>A</sub> − μ<sub>B</sub>) / √(s²<sub>A</sub>/n<sub>A</sub> + s²<sub>B</sub>/n<sub>B</sub>)
+      </div>
+      <p class="small" style="margin-top:10px;">If |t| > <strong>4.5</strong> at any time point → statistically significant leakage detected (p &lt; 10<sup>−5</sup>). The device <strong>fails</strong> TVLA.</p>
+    </div>
+    <div>
+      <h3>Interpreting Results</h3>
+      <div class="interactive-demo">
+        <canvas id="tvlaCanvas" width="520" height="160" style="width:100%; background:#0a0a0f; border-radius:6px;"></canvas>
+        <p class="tiny" style="margin-top:4px;">Simulated TVLA t-test. <span class="highlight">Red</span> horizontal lines = ±4.5 threshold. <span class="cyan">Cyan</span> trace = t-value over time. Spikes exceeding threshold indicate leakage points.</p>
+      </div>
+      <br/>
+      <h3>Higher-Order TVLA</h3>
+      <p class="small">For masked implementations, apply preprocessing before the t-test: square the centered trace values (second-order), or compute products of pairs of samples. If the second-order t-test shows |t| &gt; 4.5 on a first-order masked design, the masking is <strong>broken</strong>. Extend to n<sup>th</sup>-order for n<sup>th</sup>-order masking evaluation.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: HARDWARE -->
+<!-- ============================================================ -->
+<section class="section-title" data-background-gradient="radial-gradient(ellipse at 60% 60%, #0a0a1a 0%, #0a0a0f 70%)">
+  <p class="section-num">Section VII</p>
+  <h2>Hardware Countermeasures</h2>
+  <p class="dim">Silicon-level defenses for crypto accelerators</p>
+</section>
+
+<!-- SLIDE 22: HARDWARE COUNTERMEASURES -->
+<section>
+  <h2>SoC-Level Side-Channel Defenses</h2>
+  <div class="two-col">
+    <div>
+      <h3>On-Chip Noise &amp; Attenuation</h3>
+      <div class="card card-accent" style="margin-bottom:12px;">
+        <h3>Signature Attenuation Hardware (SAH)</h3>
+        <p class="small">Embed crypto core within a dedicated power regulation block. The SAH absorbs the data-dependent current signature internally, presenting only a flat (or noise-dominated) current profile to the external power pin. Demonstrated 100–1000× increase in traces-to-disclosure on AES-256.</p>
+      </div>
+      <div class="card card-cyan" style="margin-bottom:12px;">
+        <h3>On-Die Voltage Regulators</h3>
+        <p class="small">Integrated LDO or switched-capacitor regulator with fast transient response. Supply current drawn from external pin is filtered — attacker sees regulator's signature, not crypto engine's.</p>
+      </div>
+      <div class="card card-purple">
+        <h3>Random Number Generators</h3>
+        <p class="small">High-quality TRNG essential for masking, shuffling, blinding. Common: ring-oscillator based, metastable latch, or SRAM PUF-derived entropy. Must pass NIST SP 800-90B health tests.</p>
+      </div>
+    </div>
+    <div>
+      <h3>Tamper Detection &amp; Response</h3>
+      <div class="card card-warn" style="margin-bottom:12px;">
+        <h3>Environmental Sensors</h3>
+        <p class="small">Voltage glitch detectors (under/overvoltage), clock frequency monitors, temperature sensors, light sensors (detect decapsulation/laser). On anomaly: halt operation, zeroize keys, alert host.</p>
+      </div>
+      <div class="card card-green" style="margin-bottom:12px;">
+        <h3>Active Shield Mesh</h3>
+        <p class="small">Top metal layers carry a random bit pattern continuously checked by the security controller. Any physical probing or FIB (focused ion beam) edit that cuts a mesh wire triggers immediate key zeroization. Used in EMV chips, HSMs, Apple Secure Enclave.</p>
+      </div>
+      <div class="card card-orange">
+        <h3>Secure Boot &amp; Key Storage</h3>
+        <p class="small">Keys stored in OTP/eFuse or SRAM PUF — never exposed on bus. Crypto operations execute inside a hardened island with dedicated clock, power, and bus isolation. ARM TrustZone CryptoCell, Intel AES-NI, dedicated secure elements (SE050, ATECC608).</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 23: AREA/PERF COMPARISON -->
+<section>
+  <h2>Cost of Protection — Area &amp; Performance</h2>
+  <table class="taxonomy-table">
+    <thead>
+      <tr><th>Implementation</th><th>Order</th><th>Area (GE)</th><th>Throughput</th><th>Randomness / enc</th><th>Traces to break</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>AES-128 (unprotected)</td><td>—</td><td>~2,400</td><td>54 cycles</td><td>0 bits</td><td class="highlight">~500</td></tr>
+      <tr><td>AES-128 + 1st-order TI</td><td>d=1</td><td>~7,500</td><td>266 cycles</td><td>~48 bits</td><td>~50,000</td></tr>
+      <tr><td>AES-128 + 1st-order DOM</td><td>d=1</td><td>~5,800</td><td>~108 cycles</td><td>~18 bits/round</td><td>~50,000</td></tr>
+      <tr><td>AES-128 + 2nd-order DOM</td><td>d=2</td><td>~11,000</td><td>~216 cycles</td><td>~54 bits/round</td><td>~10<sup>8</sup></td></tr>
+      <tr><td>AES-128 + shuffling + mask</td><td>d=1</td><td>~8,200</td><td>~160 cycles</td><td>~128 bits</td><td>~10<sup>6</sup></td></tr>
+      <tr><td>AES-128 + SAH wrapper</td><td>—</td><td>~4,000 + SAH</td><td>54 cycles</td><td>0 bits</td><td>&gt; 10<sup>7</sup></td></tr>
+    </tbody>
+  </table>
+  <p class="small" style="margin-top:12px;">GE = gate equivalents (1 GE ≈ 2-input NAND). Cycle counts for round-based architectures at 1 round/cycle. Traces-to-break assumes first-order CPA attack on the respective protection level. Values are approximate — vary with technology node, implementation style, and attack sophistication.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: CASE STUDIES -->
+<!-- ============================================================ -->
+<section class="section-title" data-background-gradient="radial-gradient(ellipse at 30% 30%, #1a0a1a 0%, #0a0a0f 70%)">
+  <p class="section-num">Section VIII</p>
+  <h2>Real-World Case Studies</h2>
+  <p class="dim">When theory meets silicon</p>
+</section>
+
+<!-- SLIDE 24: CASE STUDIES -->
+<section>
+  <h2>Notable Side-Channel Attacks in History</h2>
+  <div class="three-col">
+    <div class="card card-accent">
+      <h3>EMV Smart Cards (2000s)</h3>
+      <p class="small">DPA on DES/3DES implementations in banking smart cards recovered PIN encryption keys. Led to mandatory SPA/DPA resistance testing in Common Criteria (EAL4+ with AVA_VAN.5). Modern EMV chips use masking + active shields + environmental sensors.</p>
+      <span class="tag tag-red">Power Analysis</span>
+    </div>
+    <div class="card card-cyan">
+      <h3>OpenSSL RSA via Cache (2005)</h3>
+      <p class="small">Bernstein demonstrated timing-based key extraction from OpenSSL AES over a network. Percival extracted RSA keys via L1 cache contention on hyperthreaded Intel CPUs. Led to constant-time bignum operations and AES-NI adoption.</p>
+      <span class="tag tag-blue">Cache Timing</span>
+    </div>
+    <div class="card card-purple">
+      <h3>TEMPEST / Van Eck (1985–)</h3>
+      <p class="small">NSA's classified program (later declassified) demonstrated reconstruction of CRT monitor images from EM emanations at distance. Van Eck published civilian version in 1985. Modern extensions: recovering LCD content, keyboard keystrokes from EM.</p>
+      <span class="tag tag-purple">EM Emanation</span>
+    </div>
+  </div>
+  <div class="three-col" style="margin-top:16px;">
+    <div class="card card-orange">
+      <h3>Spectre / Meltdown (2018)</h3>
+      <p class="small">Affected virtually all modern CPUs (Intel, AMD, ARM). Spectre exploited branch prediction; Meltdown exploited out-of-order execution. Industry-wide response: OS patches, microcode updates, CPU redesigns. Performance impact: 5–30%.</p>
+      <span class="tag tag-orange">Microarchitectural</span>
+    </div>
+    <div class="card card-warn">
+      <h3>Plundervolt / VoltPillager (2019–21)</h3>
+      <p class="small">Software-controlled undervolting (via DVFS interface) induced faults inside Intel SGX enclaves, breaking AES-NI integrity. VoltPillager showed hardware voltage injection bypassed all software mitigations. Led to Intel locking DVFS in SGX mode.</p>
+      <span class="tag tag-yellow">Fault Injection</span>
+    </div>
+    <div class="card card-green">
+      <h3>ROCA — Infineon TPM (2017)</h3>
+      <p class="small">RSA key generation in Infineon TPMs used a flawed fast-prime algorithm. Side-channel analysis revealed the structure, allowing factorization of 2048-bit RSA keys from the public key alone. Affected millions of Estonian ID cards, YubiKeys, and TPM-protected machines.</p>
+      <span class="tag tag-green">Algorithmic + SC</span>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 25: DEFENSE IN DEPTH -->
+<section>
+  <h2>Defense in Depth — Layered Protection</h2>
+  <p>No single countermeasure is sufficient. Real-world secure implementations combine multiple layers:</p>
+  <div style="max-width:700px; margin:20px auto;">
+    <div class="timeline-bar" style="height:48px; margin-bottom:3px;">
+      <div style="flex:2; background:linear-gradient(90deg, #ef4444, #dc2626); color:white;">Algorithm Design</div>
+      <div style="flex:2; background:linear-gradient(90deg, #f97316, #ea580c); color:white;">SW Implementation</div>
+      <div style="flex:2; background:linear-gradient(90deg, #22d3ee, #0891b2); color:white;">HW Countermeasures</div>
+      <div style="flex:1.5; background:linear-gradient(90deg, #a78bfa, #7c3aed); color:white;">Physical</div>
+      <div style="flex:1.5; background:linear-gradient(90deg, #4ade80, #16a34a); color:white;">Testing</div>
+    </div>
+    <div class="three-col small" style="margin-top:16px;">
+      <div>
+        <p class="highlight"><strong>Algorithm Layer</strong></p>
+        <p>• Algorithms with inherent resistance (e.g., Keccak's sponge has no S-box lookup)<br/>• Avoid RSA-CRT without verification<br/>• Prefer X25519 over NIST P-256 (easier to implement in constant time)</p>
+      </div>
+      <div>
+        <p class="cyan"><strong>Software Layer</strong></p>
+        <p>• Constant-time code discipline<br/>• Boolean/arithmetic masking<br/>• Shuffling of independent operations<br/>• Blinding (randomize inputs to foil DPA)<br/>• Verified with ct-verif / dudect</p>
+      </div>
+      <div>
+        <p class="purple"><strong>Hardware + Physical Layer</strong></p>
+        <p>• Threshold implementations in RTL<br/>• On-chip noise injection / SAH<br/>• Environmental sensors & active mesh<br/>• TVLA validation at silicon bring-up<br/>• Common Criteria / FIPS 140-3 certification</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE 26: BLINDING -->
+<section>
+  <h2>Blinding — Protocol-Level Defense</h2>
+  <div class="two-col">
+    <div>
+      <h3>RSA Blinding</h3>
+      <p class="small">Randomize the input to the private-key operation so the attacker cannot correlate known inputs with power/timing traces.</p>
+      <pre><code class="language-python"># RSA signature with blinding
+def rsa_sign_blinded(m, d, n):
+    # Generate random blinding factor
+    r = random_coprime(n)
+    r_inv = modular_inverse(r, n)
+    
+    # Blind the message
+    m_blind = (m * pow(r, e, n)) % n
+    
+    # Sign the blinded message
+    s_blind = pow(m_blind, d, n)  # leaks info about r, not d!
+    
+    # Unblind the signature
+    s = (s_blind * r_inv) % n
+    return s  # correct signature, no leakage</code></pre>
+      <p class="small" style="margin-top:8px;">Every invocation uses a fresh random <code>r</code>, so the intermediate values during exponentiation are completely randomized. Attacker's traces are decorrelated from the actual key bits.</p>
+    </div>
+    <div>
+      <h3>ECC Scalar Blinding</h3>
+      <p class="small">For elliptic curve scalar multiplication <code>k·G</code>:</p>
+      <div class="card" style="margin-bottom:12px;">
+        <h3>Scalar Blinding</h3>
+        <p class="small">Replace <em>k</em> with <em>k + r·n</em> where <em>n</em> is the group order and <em>r</em> is random. Since <em>n·G = O</em> (point at infinity), the result is unchanged: <code>(k + r·n)·G = k·G</code>. But the scalar bits seen by the multiplier are randomized.</p>
+      </div>
+      <div class="card">
+        <h3>Point Blinding</h3>
+        <p class="small">Add a random point <em>R</em> to the input, compute <code>k·(G + R)</code>, then subtract <code>k·R</code>. Requires precomputation of <em>k·R</em> via a separate (protected) path.</p>
+      </div>
+      <br/>
+      <div class="card card-green">
+        <h3>Projective Coordinate Randomization</h3>
+        <p class="small">Represent point (X, Y, Z) as (λX, λY, λZ) for random λ. Same projective point, but all intermediate coordinate values are randomized. Near-zero overhead.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SECTION: SUMMARY -->
+<!-- ============================================================ -->
+<section>
+  <h2>Summary &amp; Key Takeaways</h2>
+  <div class="two-col">
+    <div>
+      <div class="card card-accent" style="margin-bottom:12px;">
+        <h3>Attack Surface</h3>
+        <p class="small">Every physical implementation leaks information through time, power, EM, cache state, sound, and fault responses. Mathematical security guarantees do <strong>not</strong> automatically transfer to real hardware/software.</p>
+      </div>
+      <div class="card card-cyan" style="margin-bottom:12px;">
+        <h3>Passive Attacks</h3>
+        <p class="small">SPA/DPA/CPA extract keys by observing power consumption. Cache timing attacks (Flush+Reload, Spectre) work purely in software. Template attacks and deep-learning SCA approach single-trace key recovery.</p>
+      </div>
+      <div class="card card-purple">
+        <h3>Active Attacks</h3>
+        <p class="small">Voltage/clock glitching, EMFI, and laser FI induce faults for DFA. RowHammer is a software-only fault injection. A single faulty RSA-CRT signature breaks the key.</p>
+      </div>
+    </div>
+    <div>
+      <div class="card card-green" style="margin-bottom:12px;">
+        <h3>Countermeasures</h3>
+        <p class="small"><strong>Masking</strong> (Boolean, arithmetic, threshold implementations) removes statistical dependence. <strong>Hiding</strong> (shuffling, dual-rail logic, noise injection) reduces SNR. <strong>Constant-time code</strong> eliminates timing channels. <strong>Blinding</strong> randomizes protocol inputs. <strong>Hardware sensors</strong> detect fault injection.</p>
+      </div>
+      <div class="card card-warn" style="margin-bottom:12px;">
+        <h3>Defense in Depth</h3>
+        <p class="small">No single technique is foolproof. Production systems layer masking + hiding + constant-time + blinding + hardware sensors + TVLA testing. Certification standards (Common Criteria, FIPS 140-3, EMVCo) mandate multi-layer SCA resistance.</p>
+      </div>
+      <div class="card card-orange">
+        <h3>Ongoing Arms Race</h3>
+        <p class="small">Deep-learning SCA, cross-device attacks, and microarchitectural exploits continue to advance. Post-quantum algorithms (ML-KEM, ML-DSA) introduce new SCA surfaces. The field remains an active frontier of both attack and defense research.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SLIDE: REFERENCES -->
+<section>
+  <h2>References &amp; Further Reading</h2>
+  <div class="two-col small">
+    <div>
+      <p><strong>Foundational Papers</strong></p>
+      <p>• Kocher, "Timing Attacks on Implementations of Diffie-Hellman, RSA, DSS, and Other Systems" (1996)<br/>
+      • Kocher, Jaffe, Jun, "Differential Power Analysis" (1999)<br/>
+      • Chari, Rao, Rohatgi, "Template Attacks" (CHES 2002)<br/>
+      • Biham & Shamir, "Differential Fault Analysis" (1997)<br/>
+      • Boneh, DeMillo, Lipton, "On the Importance of Checking Crypto Computations" (1997)<br/>
+      • Piret & Quisquater, "A DFA Technique Against SPN Structures" (2003)<br/>
+      • Bernstein, "Cache-Timing Attacks on AES" (2005)</p>
+      <p style="margin-top:12px;"><strong>Spectre / Meltdown</strong></p>
+      <p>• Kocher et al., "Spectre Attacks: Exploiting Speculative Execution" (2018)<br/>
+      • Lipp et al., "Meltdown: Reading Kernel Memory from User Space" (2018)</p>
+    </div>
+    <div>
+      <p><strong>Countermeasures</strong></p>
+      <p>• Nikova, Rechberger, Rijmen, "Threshold Implementations Against Side-Channel Attacks and Glitches" (2006)<br/>
+      • Ishai, Sahai, Wagner, "Private Circuits: Securing Hardware Against Probing Attacks" (2003)<br/>
+      • Das & Sen, "EM and Power SCA: Advanced Attacks and Low-Overhead Countermeasures" (2020)<br/>
+      • Schneider, Moradi, Güneysu, "Arithmetic Addition over Boolean Masking" (2015)<br/>
+      • Goodwill et al., "TVLA — A Testing Methodology for SCA Resistance" (2011)</p>
+      <p style="margin-top:12px;"><strong>Standards &amp; Specifications</strong></p>
+      <p>• NIST SP 800-90B (Entropy Sources)<br/>
+      • FIPS 140-3 (Cryptographic Module Validation)<br/>
+      • Common Criteria ISO/IEC 15408 (EAL4+ AVA_VAN.5)<br/>
+      • EMVCo Security Evaluation Standards</p>
+    </div>
+  </div>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<!-- ============================================================ -->
+<!-- SCRIPTS -->
+<!-- ============================================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/highlight/highlight.min.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  slideNumber: 'c/t',
+  width: 1280,
+  height: 720,
+  margin: 0.04,
+  transition: 'fade',
+  transitionSpeed: 'fast',
+  plugins: [ RevealHighlight ]
+});
+
+/* ---- SPA Canvas ---- */
+(function(){
+  const c = document.getElementById('spaCanvas');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  // Simulated key bits: 1 0 1 1 0 0 1 0 1 0 0 1
+  const keyBits = [1,0,1,1,0,0,1,0,1,0,0,1];
+  const segW = W / keyBits.length;
+
+  function drawSPA() {
+    ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0,0,W,H);
+    ctx.strokeStyle = '#333'; ctx.lineWidth = 0.5;
+    for(let y = 30; y < H; y += 30){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+
+    ctx.lineWidth = 2;
+    keyBits.forEach((bit, i) => {
+      const x0 = i * segW + 4;
+      const w = segW - 8;
+      // Square portion
+      const sqH = 35 + Math.random()*10;
+      ctx.strokeStyle = '#22d3ee';
+      ctx.beginPath();
+      for(let px = 0; px < w * 0.5; px++) {
+        const noise = (Math.random()-0.5)*6;
+        const sig = Math.sin(px/4)*sqH + noise;
+        const py = H/2 - sig;
+        px === 0 ? ctx.moveTo(x0+px, py) : ctx.lineTo(x0+px, py);
+      }
+      ctx.stroke();
+
+      if(bit === 1) {
+        // Multiply portion (taller)
+        const mH = 60 + Math.random()*15;
+        ctx.strokeStyle = '#ef4444';
+        ctx.beginPath();
+        for(let px = Math.floor(w*0.5); px < w; px++) {
+          const noise = (Math.random()-0.5)*8;
+          const sig = Math.sin(px/4)*mH + noise;
+          const py = H/2 - sig;
+          px === Math.floor(w*0.5) ? ctx.moveTo(x0+px, py) : ctx.lineTo(x0+px, py);
+        }
+        ctx.stroke();
+      } else {
+        // Just continued square
+        ctx.strokeStyle = '#22d3ee';
+        ctx.beginPath();
+        for(let px = Math.floor(w*0.5); px < w; px++) {
+          const noise = (Math.random()-0.5)*6;
+          const sig = Math.sin(px/4)*sqH + noise;
+          const py = H/2 - sig;
+          px === Math.floor(w*0.5) ? ctx.moveTo(x0+px, py) : ctx.lineTo(x0+px, py);
+        }
+        ctx.stroke();
+      }
+
+      // Label
+      ctx.fillStyle = bit ? '#ef4444' : '#22d3ee';
+      ctx.font = '11px JetBrains Mono';
+      ctx.textAlign = 'center';
+      ctx.fillText(bit ? 'SM' : 'S', x0 + w/2, H - 6);
+      ctx.fillStyle = '#71717a';
+      ctx.fillText(bit.toString(), x0 + w/2, 14);
+    });
+  }
+  setTimeout(drawSPA, 300);
+})();
+
+/* ---- CPA Canvas ---- */
+let cpaAnimId = null;
+function resetCPA() {
+  if(cpaAnimId) cancelAnimationFrame(cpaAnimId);
+  const c = document.getElementById('cpaCanvas');
+  const ctx = c.getContext('2d');
+  ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0,0,c.width,c.height);
+  document.getElementById('cpaStatus').textContent = 'Ready — click Run CPA';
+  document.getElementById('cpaStatus').style.color = '#71717a';
+}
+
+function runCPA() {
+  const c = document.getElementById('cpaCanvas');
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  const numTraces = 200;
+  const numWrong = 20;
+  let step = 0;
+
+  // Pre-generate correlation curves
+  const correct = []; const wrongs = [];
+  for(let i = 0; i <= numTraces; i++) {
+    const t = i / numTraces;
+    correct.push(Math.min(0.95, 0.15 + 0.8 * (1 - Math.exp(-3*t)) + (Math.random()-0.5)*0.05));
+    const wSet = [];
+    for(let w = 0; w < numWrong; w++) {
+      wSet.push(0.05 + 0.12*Math.sin(t*3 + w) + (Math.random()-0.5)*0.08);
+    }
+    wrongs.push(wSet);
+  }
+
+  function draw() {
+    ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0,0,W,H);
+    // Grid
+    ctx.strokeStyle = '#222'; ctx.lineWidth = 0.5;
+    for(let y = 0; y <= H; y += H/5){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    // Labels
+    ctx.fillStyle = '#555'; ctx.font = '10px JetBrains Mono'; ctx.textAlign = 'right';
+    ctx.fillText('|ρ|=1.0', 38, 12); ctx.fillText('|ρ|=0.0', 38, H-2);
+
+    const xScale = (W - 50) / numTraces;
+
+    // Wrong hypotheses
+    for(let w = 0; w < numWrong; w++) {
+      ctx.strokeStyle = '#444'; ctx.lineWidth = 0.8; ctx.beginPath();
+      for(let i = 0; i <= step; i++) {
+        const x = 50 + i * xScale;
+        const y = H - 10 - wrongs[i][w] * (H - 20);
+        i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+      }
+      ctx.stroke();
+    }
+
+    // Correct hypothesis
+    ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 2.5; ctx.beginPath();
+    for(let i = 0; i <= step; i++) {
+      const x = 50 + i * xScale;
+      const y = H - 10 - correct[i] * (H - 20);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+
+    // Status
+    const st = document.getElementById('cpaStatus');
+    st.textContent = `Traces: ${step}/${numTraces}  |  Correct key ρ = ${correct[step].toFixed(3)}`;
+    st.style.color = step >= numTraces ? '#4ade80' : '#22d3ee';
+
+    if(step < numTraces) { step += 2; cpaAnimId = requestAnimationFrame(draw); }
+    else { st.textContent += '  ✓ KEY RECOVERED'; }
+  }
+  resetCPA();
+  draw();
+}
+
+/* ---- TVLA Canvas ---- */
+(function(){
+  const c = document.getElementById('tvlaCanvas');
+  if(!c) return;
+  const ctx = c.getContext('2d');
+  const W = c.width, H = c.height;
+  setTimeout(() => {
+    ctx.fillStyle = '#0a0a0f'; ctx.fillRect(0,0,W,H);
+    // Threshold lines
+    ctx.strokeStyle = '#ef444480'; ctx.lineWidth = 1; ctx.setLineDash([4,4]);
+    const threshY1 = H/2 - (4.5/10) * (H/2 - 10);
+    const threshY2 = H/2 + (4.5/10) * (H/2 - 10);
+    ctx.beginPath(); ctx.moveTo(0, threshY1); ctx.lineTo(W, threshY1); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0, threshY2); ctx.lineTo(W, threshY2); ctx.stroke();
+    ctx.setLineDash([]);
+    // Labels
+    ctx.fillStyle = '#ef4444'; ctx.font = '9px JetBrains Mono'; ctx.textAlign = 'left';
+    ctx.fillText('+4.5', 4, threshY1 - 3); ctx.fillText('-4.5', 4, threshY2 + 10);
+    ctx.fillStyle = '#555'; ctx.fillText('0', 4, H/2 + 4);
+
+    // t-test trace
+    ctx.strokeStyle = '#22d3ee'; ctx.lineWidth = 1.5; ctx.beginPath();
+    for(let x = 30; x < W; x++) {
+      const t = (x - 30) / (W - 30);
+      // Mostly near zero with spikes at "leakage points"
+      let val = (Math.random()-0.5)*3;
+      // Add deliberate leakage spikes
+      if(Math.abs(t - 0.2) < 0.02) val += 7 * Math.exp(-Math.pow((t-0.2)/0.008,2));
+      if(Math.abs(t - 0.45) < 0.02) val += -6.5 * Math.exp(-Math.pow((t-0.45)/0.01,2));
+      if(Math.abs(t - 0.7) < 0.015) val += 8 * Math.exp(-Math.pow((t-0.7)/0.007,2));
+      if(Math.abs(t - 0.82) < 0.02) val += 5.5 * Math.exp(-Math.pow((t-0.82)/0.01,2));
+      const y = H/2 - (val/10) * (H/2 - 10);
+      x === 30 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    }
+    ctx.stroke();
+  }, 400);
+})();
+</script>
+
+</body>
+</html>
