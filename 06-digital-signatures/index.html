@@ -1,0 +1,1454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>06 — Digital Signatures (ECDSA, EdDSA, Schnorr)</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/black.min.css" id="theme" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/highlight/monokai.min.css" />
+
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --accent:  #00e5ff;
+    --accent2: #76ff03;
+    --accent3: #ff6d00;
+    --accent4: #d500f9;
+    --bg:      #0a0e17;
+    --fg:      #e0e6f0;
+    --muted:   #5a6a8a;
+    --card-bg: rgba(255,255,255,0.04);
+  }
+
+  .reveal { font-family: 'DM Sans', sans-serif; color: var(--fg); }
+  .reveal .slides { text-align: left; }
+  .reveal h1, .reveal h2, .reveal h3 { font-family: 'Playfair Display', serif; color: #fff; text-transform: none; letter-spacing: -0.02em; }
+  .reveal h1 { font-size: 2.4em; }
+  .reveal h2 { font-size: 1.6em; border-bottom: 2px solid var(--accent); padding-bottom: .25em; margin-bottom: .6em; display: inline-block; }
+  .reveal h3 { font-size: 1.15em; color: var(--accent); }
+  .reveal p, .reveal li { font-size: 0.72em; line-height: 1.55; }
+  .reveal code, .reveal pre code { font-family: 'JetBrains Mono', monospace; font-size: 0.62em; }
+  .reveal pre { box-shadow: none; width: 100%; }
+  .reveal .slides section { padding: 0.3em 1.2em; }
+  .reveal ul { list-style: none; padding-left: 0; }
+  .reveal ul li::before { content: "▸ "; color: var(--accent); font-weight: 700; }
+  .reveal ul li { margin-bottom: 0.35em; }
+  .reveal table { font-size: 0.62em; border-collapse: collapse; width: 100%; margin: 0.5em 0; }
+  .reveal th { background: rgba(0,229,255,0.12); color: var(--accent); font-weight: 700; text-align: left; padding: 0.4em 0.6em; border-bottom: 2px solid var(--accent); }
+  .reveal td { padding: 0.35em 0.6em; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  .reveal tr:hover td { background: rgba(0,229,255,0.04); }
+  .reveal .accent  { color: var(--accent);  }
+  .reveal .accent2 { color: var(--accent2); }
+  .reveal .accent3 { color: var(--accent3); }
+  .reveal .accent4 { color: var(--accent4); }
+  .reveal .muted   { color: var(--muted);   }
+  .reveal .small    { font-size: 0.6em; }
+  .reveal .tiny     { font-size: 0.5em; }
+  .reveal .mono     { font-family: 'JetBrains Mono', monospace; }
+  .reveal .card {
+    background: var(--card-bg);
+    border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 10px;
+    padding: 0.7em 1em;
+    margin: 0.4em 0;
+  }
+  .reveal .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0.8em; }
+  .reveal .grid3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.8em; }
+  .reveal .grid23 { display: grid; grid-template-columns: 2fr 3fr; gap: 0.8em; }
+  .reveal .grid32 { display: grid; grid-template-columns: 3fr 2fr; gap: 0.8em; }
+  .reveal .math-box {
+    background: rgba(0,229,255,0.06);
+    border-left: 3px solid var(--accent);
+    padding: 0.6em 0.9em;
+    border-radius: 0 8px 8px 0;
+    margin: 0.5em 0;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.68em;
+  }
+  .reveal .warn-box {
+    background: rgba(255,109,0,0.1);
+    border-left: 3px solid var(--accent3);
+    padding: 0.5em 0.9em;
+    border-radius: 0 8px 8px 0;
+    margin: 0.5em 0;
+  }
+  .reveal .ok-box {
+    background: rgba(118,255,3,0.08);
+    border-left: 3px solid var(--accent2);
+    padding: 0.5em 0.9em;
+    border-radius: 0 8px 8px 0;
+    margin: 0.5em 0;
+  }
+  .reveal .badge {
+    display: inline-block;
+    background: rgba(0,229,255,0.15);
+    color: var(--accent);
+    padding: 0.15em 0.5em;
+    border-radius: 4px;
+    font-size: 0.6em;
+    font-weight: 700;
+    margin-right: 0.3em;
+  }
+  .reveal .badge-warn {
+    background: rgba(255,109,0,0.15);
+    color: var(--accent3);
+  }
+  .reveal .badge-ok {
+    background: rgba(118,255,3,0.12);
+    color: var(--accent2);
+  }
+  .reveal .badge-purple {
+    background: rgba(213,0,249,0.15);
+    color: var(--accent4);
+  }
+
+  /* Animated flow diagrams */
+  .flow-arrow { color: var(--accent); font-weight: 700; }
+  .fragment.highlight-current-blue.visible { color: var(--accent) !important; }
+
+  /* Title slide special */
+  .title-slide h1 { font-size: 2.8em; line-height: 1.1; }
+  .title-slide .subtitle { font-size: 1.0em; color: var(--accent); margin-top: 0.3em; }
+  .title-slide .meta { font-size: 0.6em; color: var(--muted); margin-top: 1.5em; }
+
+  /* Interactive controls */
+  .interactive-demo {
+    background: rgba(0,0,0,0.4);
+    border: 1px solid rgba(0,229,255,0.2);
+    border-radius: 12px;
+    padding: 1em;
+    margin: 0.5em 0;
+  }
+  .interactive-demo button {
+    background: linear-gradient(135deg, rgba(0,229,255,0.2), rgba(0,229,255,0.05));
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    padding: 0.3em 0.8em;
+    border-radius: 6px;
+    cursor: pointer;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.7em;
+    margin: 0.2em;
+    transition: all 0.2s;
+  }
+  .interactive-demo button:hover {
+    background: rgba(0,229,255,0.25);
+    box-shadow: 0 0 12px rgba(0,229,255,0.3);
+  }
+  .interactive-demo input[type="text"],
+  .interactive-demo textarea {
+    background: rgba(0,0,0,0.5);
+    border: 1px solid rgba(255,255,255,0.15);
+    color: var(--fg);
+    padding: 0.3em 0.5em;
+    border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.65em;
+    width: 100%;
+  }
+  .interactive-demo .output {
+    background: rgba(0,0,0,0.6);
+    border-radius: 6px;
+    padding: 0.5em;
+    margin-top: 0.4em;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.55em;
+    max-height: 180px;
+    overflow-y: auto;
+    word-break: break-all;
+  }
+
+  /* SVG diagrams */
+  svg text { font-family: 'DM Sans', sans-serif; }
+  svg .label { fill: #e0e6f0; font-size: 13px; }
+  svg .label-sm { fill: #e0e6f0; font-size: 11px; }
+  svg .accent-stroke { stroke: var(--accent); stroke-width: 2; fill: none; }
+  svg .accent2-stroke { stroke: var(--accent2); stroke-width: 2; fill: none; }
+  svg .accent3-stroke { stroke: var(--accent3); stroke-width: 2; fill: none; }
+  svg .node { fill: rgba(0,229,255,0.1); stroke: var(--accent); stroke-width: 1.5; }
+  svg .node2 { fill: rgba(118,255,3,0.1); stroke: var(--accent2); stroke-width: 1.5; }
+  svg .node3 { fill: rgba(255,109,0,0.1); stroke: var(--accent3); stroke-width: 1.5; }
+  svg .arrow { fill: var(--accent); }
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================================================ -->
+<!-- SLIDE 1 : TITLE                                               -->
+<!-- ============================================================ -->
+<section class="title-slide" data-background-gradient="radial-gradient(ellipse at 30% 60%, #0d1a2e 0%, #0a0e17 70%)">
+  <div style="text-align:center;">
+    <p style="font-size:3em; margin:0;">🖊️</p>
+    <h1>Digital Signatures</h1>
+    <div class="subtitle">ECDSA · EdDSA · Schnorr · Threshold · Post-Quantum</div>
+    <p style="font-size:0.7em; color:var(--muted); margin-top:0.6em;">
+      From elliptic-curve mathematics through NIST FIPS&nbsp;186-5 standards<br/>
+      to SystemVerilog hardware accelerators and Python implementations
+    </p>
+    <p class="meta">
+      Modern Cryptography Series — Presentation 06 &nbsp;|&nbsp; ← / → to navigate &nbsp;|&nbsp; <kbd>Esc</kbd> overview
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 2 : ROADMAP                                             -->
+<!-- ============================================================ -->
+<section>
+  <h2>Roadmap</h2>
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <span class="badge">01–04</span> <strong>Foundations</strong><br/>
+        <span class="small">Why sign? · Properties · Threat model · Hash-then-sign paradigm</span>
+      </div>
+      <div class="card">
+        <span class="badge">05–08</span> <strong>Classical Schemes</strong><br/>
+        <span class="small">DSA lineage · ECDSA deep dive · Schnorr signatures · EdDSA / Ed25519</span>
+      </div>
+      <div class="card">
+        <span class="badge">09–10</span> <strong>Advanced Protocols</strong><br/>
+        <span class="small">Threshold & multi-sig (MuSig2, FROST) · Blind & ring signatures</span>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <span class="badge">11–12</span> <strong>Standards & Real-World</strong><br/>
+        <span class="small">FIPS 186-5 · RFC 8032 · BIP 340 · TLS 1.3 · Blockchain</span>
+      </div>
+      <div class="card">
+        <span class="badge">13–14</span> <strong>Hardware</strong><br/>
+        <span class="small">ECDSA/EdDSA FPGA cores · ASIC accelerators · Side-channel countermeasures</span>
+      </div>
+      <div class="card">
+        <span class="badge">15–16</span> <strong>Post-Quantum & Code</strong><br/>
+        <span class="small">ML-DSA (FIPS 204) · SLH-DSA (FIPS 205) · Python · SystemVerilog</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 3 : WHY DIGITAL SIGNATURES?                             -->
+<!-- ============================================================ -->
+<section>
+  <h2>Why Digital Signatures?</h2>
+  <p>A digital signature binds a <span class="accent">message</span> to a <span class="accent2">signer's identity</span> with three guarantees:</p>
+  <div class="grid3" style="margin-top:0.6em;">
+    <div class="card" style="text-align:center;">
+      <p style="font-size:1.5em; margin:0;">🔒</p>
+      <h3>Authentication</h3>
+      <p class="small">Only the holder of the private key can produce a valid signature for the associated public key.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <p style="font-size:1.5em; margin:0;">🛡️</p>
+      <h3>Integrity</h3>
+      <p class="small">Any modification to the signed message — even a single bit flip — invalidates the signature.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <p style="font-size:1.5em; margin:0;">📜</p>
+      <h3>Non-Repudiation</h3>
+      <p class="small">The signer cannot credibly deny having signed, since only their private key could have produced the signature.</p>
+    </div>
+  </div>
+  <div class="warn-box small" style="margin-top:0.6em;">
+    <strong>Contrast with MACs:</strong> A Message Authentication Code (HMAC) provides authentication and integrity, but <em>not</em> non-repudiation — both parties share the same secret key, so either could have produced the tag.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 4 : ANATOMY — HASH-THEN-SIGN                           -->
+<!-- ============================================================ -->
+<section>
+  <h2>Anatomy: Hash-then-Sign</h2>
+  <p>All modern signature schemes follow the <span class="accent">hash-then-sign</span> paradigm:</p>
+
+  <svg viewBox="0 0 800 200" style="width:100%; margin:0.6em 0;">
+    <!-- Message -->
+    <rect class="node" x="10" y="60" width="110" height="50" rx="8"/>
+    <text class="label" x="65" y="90" text-anchor="middle">Message m</text>
+    <!-- Arrow -->
+    <line x1="120" y1="85" x2="175" y2="85" stroke="#00e5ff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+    <!-- Hash -->
+    <rect class="node3" x="175" y="50" width="120" height="70" rx="8"/>
+    <text class="label" x="235" y="82" text-anchor="middle">Hash</text>
+    <text class="label-sm" x="235" y="100" text-anchor="middle" fill="#ff6d00">SHA-256 / SHA-512</text>
+    <!-- Arrow -->
+    <line x1="295" y1="85" x2="350" y2="85" stroke="#00e5ff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+    <!-- h = H(m) -->
+    <rect class="node" x="350" y="65" width="80" height="40" rx="6"/>
+    <text class="label" x="390" y="90" text-anchor="middle" font-family="JetBrains Mono" font-size="12">h = H(m)</text>
+    <!-- Arrow -->
+    <line x1="430" y1="85" x2="490" y2="85" stroke="#00e5ff" stroke-width="2" marker-end="url(#arrowBlue)"/>
+    <!-- Sign box -->
+    <rect class="node2" x="490" y="40" width="130" height="90" rx="8"/>
+    <text class="label" x="555" y="72" text-anchor="middle">Sign(h, privKey)</text>
+    <text class="label-sm" x="555" y="92" text-anchor="middle" fill="#76ff03">EC scalar mul</text>
+    <text class="label-sm" x="555" y="108" text-anchor="middle" fill="#76ff03">+ mod arithmetic</text>
+    <!-- privKey input -->
+    <rect class="node3" x="510" y="148" width="90" height="35" rx="6"/>
+    <text class="label-sm" x="555" y="170" text-anchor="middle" fill="#ff6d00">Private Key d</text>
+    <line x1="555" y1="148" x2="555" y2="130" stroke="#ff6d00" stroke-width="1.5" marker-end="url(#arrowOrange)"/>
+    <!-- Arrow out -->
+    <line x1="620" y1="85" x2="680" y2="85" stroke="#76ff03" stroke-width="2" marker-end="url(#arrowGreen)"/>
+    <!-- Signature -->
+    <rect class="node2" x="680" y="60" width="110" height="50" rx="8"/>
+    <text class="label" x="735" y="82" text-anchor="middle">Signature</text>
+    <text class="label-sm" x="735" y="98" text-anchor="middle" fill="#76ff03">(r, s) or (R, s)</text>
+    <!-- Arrow defs -->
+    <defs>
+      <marker id="arrowBlue" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#00e5ff"/></marker>
+      <marker id="arrowGreen" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#76ff03"/></marker>
+      <marker id="arrowOrange" viewBox="0 0 10 10" refX="10" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M 0 0 L 10 5 L 0 10 z" fill="#ff6d00"/></marker>
+    </defs>
+  </svg>
+
+  <div class="grid2">
+    <div class="card small">
+      <strong class="accent">Why hash first?</strong><br/>
+      ① Reduces arbitrary-length message to fixed-size digest<br/>
+      ② Prevents existential forgery attacks on raw signing<br/>
+      ③ Hides message structure from the EC arithmetic
+    </div>
+    <div class="card small">
+      <strong class="accent2">Verification mirror:</strong><br/>
+      Verifier recomputes <code>h = H(m)</code> and checks the signature against the <em>public key</em>. No private key needed — only the corresponding public key Q = d·G.
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 5 : THE DSA LINEAGE                                     -->
+<!-- ============================================================ -->
+<section>
+  <h2>The DSA Family Tree</h2>
+  <svg viewBox="0 0 800 280" style="width:100%; margin:0.3em 0;">
+    <!-- ElGamal -->
+    <rect class="node3" x="310" y="5" width="180" height="40" rx="8"/>
+    <text class="label" x="400" y="30" text-anchor="middle">ElGamal Signature (1985)</text>
+    <line x1="350" y1="45" x2="200" y2="80" stroke="#5a6a8a" stroke-width="1.5"/>
+    <line x1="400" y1="45" x2="400" y2="80" stroke="#5a6a8a" stroke-width="1.5"/>
+    <line x1="450" y1="45" x2="600" y2="80" stroke="#5a6a8a" stroke-width="1.5"/>
+    <!-- DSA -->
+    <rect class="node" x="120" y="80" width="160" height="40" rx="8"/>
+    <text class="label" x="200" y="105" text-anchor="middle">DSA — FIPS 186 (1994)</text>
+    <!-- Schnorr -->
+    <rect class="node2" x="320" y="80" width="160" height="40" rx="8"/>
+    <text class="label" x="400" y="105" text-anchor="middle">Schnorr (1989/1991)</text>
+    <!-- ECDSA placeholder -->
+    <rect class="node" x="520" y="80" width="180" height="40" rx="8"/>
+    <text class="label" x="610" y="105" text-anchor="middle">ECDSA — ANSI X9.62 (1999)</text>
+    <!-- Lines down -->
+    <line x1="200" y1="120" x2="200" y2="155" stroke="#5a6a8a" stroke-width="1.5"/>
+    <line x1="400" y1="120" x2="400" y2="155" stroke="#5a6a8a" stroke-width="1.5"/>
+    <line x1="610" y1="120" x2="610" y2="155" stroke="#5a6a8a" stroke-width="1.5"/>
+    <!-- DSA deprecated -->
+    <rect x="120" y="155" width="160" height="40" rx="8" fill="rgba(255,109,0,0.12)" stroke="#ff6d00" stroke-width="1.5"/>
+    <text class="label-sm" x="200" y="172" text-anchor="middle" fill="#ff6d00">Deprecated for signing</text>
+    <text class="label-sm" x="200" y="188" text-anchor="middle" fill="#ff6d00">in FIPS 186-5 (2023)</text>
+    <!-- Schnorr children -->
+    <line x1="370" y1="155" x2="320" y2="195" stroke="#76ff03" stroke-width="1.5"/>
+    <line x1="430" y1="155" x2="480" y2="195" stroke="#76ff03" stroke-width="1.5"/>
+    <!-- EdDSA -->
+    <rect class="node2" x="230" y="195" width="180" height="40" rx="8"/>
+    <text class="label" x="320" y="220" text-anchor="middle">EdDSA — RFC 8032 (2017)</text>
+    <!-- BIP 340 -->
+    <rect class="node2" x="430" y="195" width="180" height="40" rx="8"/>
+    <text class="label" x="520" y="220" text-anchor="middle">BIP 340 Schnorr (2021)</text>
+    <!-- ECDSA FIPS -->
+    <rect class="node" x="530" y="155" width="160" height="40" rx="8"/>
+    <text class="label-sm" x="610" y="172" text-anchor="middle">FIPS 186-5 (2023)</text>
+    <text class="label-sm" x="610" y="188" text-anchor="middle">+ deterministic ECDSA</text>
+    <!-- Ed25519 / Ed448 -->
+    <line x1="290" y1="235" x2="270" y2="260" stroke="#76ff03" stroke-width="1"/>
+    <line x1="350" y1="235" x2="370" y2="260" stroke="#76ff03" stroke-width="1"/>
+    <text class="label-sm" x="270" y="275" text-anchor="middle" fill="#76ff03">Ed25519</text>
+    <text class="label-sm" x="370" y="275" text-anchor="middle" fill="#76ff03">Ed448</text>
+  </svg>
+  <div class="card small" style="margin-top:0.2em;">
+    <strong>Key insight:</strong> All these schemes derive from ElGamal's 1985 framework. The core idea is the same — prove knowledge of a private scalar <code>d</code> by constructing a relationship between a random nonce point, the message hash, and the public key — but they differ in how the relationship is computed and what security proofs are available.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 6 : ECDSA DEEP DIVE — KEYS                             -->
+<!-- ============================================================ -->
+<section>
+  <h2>ECDSA: Key Generation</h2>
+  <p>Given agreed-upon domain parameters <span class="mono small">(CURVE, G, n)</span>:</p>
+
+  <div class="math-box">
+    <strong>Private key:</strong> &nbsp; d &nbsp;←&nbsp; random integer in [1, n − 1]<br/>
+    <strong>Public key:</strong> &nbsp; Q = d · G &nbsp;&nbsp; <span class="muted">(EC point multiplication — the trapdoor)</span>
+  </div>
+
+  <div class="grid2" style="margin-top:0.5em;">
+    <div class="card">
+      <h3>NIST P-256 (secp256r1)</h3>
+      <p class="small">
+        <strong>Field:</strong> 𝔽<sub>p</sub> where p = 2<sup>256</sup> − 2<sup>224</sup> + 2<sup>192</sup> + 2<sup>96</sup> − 1<br/>
+        <strong>Order:</strong> n ≈ 2<sup>256</sup> (256-bit private keys)<br/>
+        <strong>Security:</strong> 128-bit (vs. 3072-bit RSA)<br/>
+        <strong>Usage:</strong> TLS 1.3, PIV cards, AWS KMS, FIDO2
+      </p>
+    </div>
+    <div class="card">
+      <h3>secp256k1 (Bitcoin)</h3>
+      <p class="small">
+        <strong>Field:</strong> 𝔽<sub>p</sub> where p = 2<sup>256</sup> − 2<sup>32</sup> − 977<br/>
+        <strong>Order:</strong> n ≈ 2<sup>256</sup><br/>
+        <strong>Cofactor:</strong> h = 1 (prime order, no subgroup issues)<br/>
+        <strong>Usage:</strong> Bitcoin, Ethereum, many blockchains
+      </p>
+    </div>
+  </div>
+
+  <div class="ok-box small">
+    <strong>The ECDLP trapdoor:</strong> Computing Q = d·G is fast (~0.3 ms in software). Recovering d from Q requires solving the Elliptic Curve Discrete Logarithm Problem — infeasible for properly chosen curves (~2<sup>128</sup> group operations with Pollard's rho).
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 7 : ECDSA SIGNING                                       -->
+<!-- ============================================================ -->
+<section>
+  <h2>ECDSA: Signing Algorithm</h2>
+  <p>To sign message <code>m</code> with private key <code>d</code>:</p>
+
+  <div class="math-box">
+    <strong>Step 1.</strong> &nbsp; e = H(m) &nbsp;&nbsp; <span class="muted">// e.g. SHA-256(m), truncated to bit-length of n</span><br/>
+    <strong>Step 2.</strong> &nbsp; k ← random in [1, n−1] &nbsp;&nbsp; <span class="muted accent3">// CRITICAL: must be fresh & secret per signature</span><br/>
+    <strong>Step 3.</strong> &nbsp; (x₁, y₁) = k · G &nbsp;&nbsp; <span class="muted">// random curve point</span><br/>
+    <strong>Step 4.</strong> &nbsp; r = x₁ mod n &nbsp;&nbsp; <span class="muted">// if r = 0, go back to Step 2</span><br/>
+    <strong>Step 5.</strong> &nbsp; s = k⁻¹ · (e + r · d) mod n &nbsp;&nbsp; <span class="muted">// if s = 0, go back to Step 2</span><br/><br/>
+    <strong>Signature = (r, s)</strong> &nbsp;&nbsp; <span class="muted">// two integers, each ≤ 256 bits for P-256</span>
+  </div>
+
+  <div class="warn-box small" style="margin-top:0.4em;">
+    <strong>Nonce reuse = catastrophic key leak.</strong> If the same <code>k</code> is used for two different messages m₁, m₂ yielding signatures (r, s₁) and (r, s₂), an attacker can recover the private key:<br/>
+    <code class="mono" style="color:var(--accent3)">k = (e₁ − e₂) · (s₁ − s₂)⁻¹ mod n</code> &nbsp;→&nbsp; <code class="mono" style="color:var(--accent3)">d = (s₁ · k − e₁) · r⁻¹ mod n</code><br/>
+    This exact flaw was exploited in the 2010 Sony PS3 signing key extraction, where <code>k</code> was static.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 8 : ECDSA VERIFICATION                                  -->
+<!-- ============================================================ -->
+<section>
+  <h2>ECDSA: Verification Algorithm</h2>
+  <p>Given message <code>m</code>, signature <code>(r, s)</code>, and public key <code>Q</code>:</p>
+
+  <div class="math-box">
+    <strong>Step 1.</strong> &nbsp; Check r, s ∈ [1, n−1]<br/>
+    <strong>Step 2.</strong> &nbsp; e = H(m)<br/>
+    <strong>Step 3.</strong> &nbsp; w = s⁻¹ mod n<br/>
+    <strong>Step 4.</strong> &nbsp; u₁ = e · w mod n &nbsp;&nbsp;; &nbsp;&nbsp; u₂ = r · w mod n<br/>
+    <strong>Step 5.</strong> &nbsp; (x₁, y₁) = u₁ · G + u₂ · Q &nbsp;&nbsp; <span class="muted">// Shamir's trick for dual scalar mul</span><br/>
+    <strong>Step 6.</strong> &nbsp; <strong class="accent2">Accept if x₁ mod n = r</strong>
+  </div>
+
+  <div class="card small" style="margin-top:0.5em;">
+    <h3>Why it works — the correctness proof</h3>
+    <p>
+      Substitute Q = d·G and s = k⁻¹(e + r·d) into the verification equation:<br/><br/>
+      <code>u₁·G + u₂·Q = (e·w)·G + (r·w)·(d·G) = w·(e + r·d)·G = (s⁻¹)·(s·k)·G = k·G</code><br/><br/>
+      The x-coordinate of k·G is exactly r, so the check passes. ✓
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 9 : DETERMINISTIC ECDSA (RFC 6979)                      -->
+<!-- ============================================================ -->
+<section>
+  <h2>Deterministic ECDSA — RFC 6979</h2>
+  <p>Eliminates the random nonce <code>k</code> entirely, making signatures <span class="accent">reproducible</span> and <span class="accent2">safe from RNG failures</span>.</p>
+
+  <div class="math-box">
+    k = HMAC-DRBG(private_key ‖ H(message))
+  </div>
+
+  <div class="grid2" style="margin-top:0.5em;">
+    <div class="card">
+      <h3>How it works</h3>
+      <p class="small">
+        ① Compute message hash <code>h₁ = H(m)</code><br/>
+        ② Initialize HMAC-DRBG with seed = <code>privKey ‖ h₁</code><br/>
+        ③ Generate candidate <code>k</code> via HMAC-SHA256 iterations<br/>
+        ④ If k ∈ [1, n−1] and r ≠ 0 and s ≠ 0, accept<br/>
+        ⑤ Otherwise, reseed and retry
+      </p>
+    </div>
+    <div class="card">
+      <h3>Properties</h3>
+      <p class="small">
+        <span class="badge-ok badge">✓</span> Same (key, message) → same signature<br/>
+        <span class="badge-ok badge">✓</span> No RNG required at signing time<br/>
+        <span class="badge-ok badge">✓</span> k is unique per (key, message) pair<br/>
+        <span class="badge-warn badge">⚠</span> Approved in FIPS 186-5 § 6.3.2<br/>
+        <span class="badge-warn badge">⚠</span> Determinism can ease fault injection attacks
+      </p>
+    </div>
+  </div>
+
+  <div class="ok-box small">
+    <strong>FIPS 186-5 status:</strong> Both randomized and deterministic ECDSA are approved. Deterministic is preferred for constrained devices without quality RNG; randomized is preferred when fault-injection resistance is critical.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 10 : SCHNORR SIGNATURES                                 -->
+<!-- ============================================================ -->
+<section>
+  <h2>Schnorr Signatures</h2>
+  <p>Proposed by Claus-Peter Schnorr in 1989. Simpler, provably secure under the Random Oracle Model, and crucially — <span class="accent2">linear</span>.</p>
+
+  <div class="grid2">
+    <div>
+      <div class="math-box">
+        <strong>Sign(m, d):</strong><br/>
+        k ← random in [1, n−1]<br/>
+        R = k · G<br/>
+        e = H(R ‖ P ‖ m) &nbsp;&nbsp;<span class="muted">// key-prefixed</span><br/>
+        s = k + e · d &nbsp;mod n<br/>
+        <strong>σ = (R, s)</strong> &nbsp;&nbsp;<span class="muted">// or (r<sub>x</sub>, s) — 64 bytes</span>
+      </div>
+      <div class="math-box">
+        <strong>Verify(m, σ, P):</strong><br/>
+        e = H(R ‖ P ‖ m)<br/>
+        Check: <strong class="accent2">s · G = R + e · P</strong>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Advantages over ECDSA</h3>
+        <p class="small">
+          <span class="badge-ok badge">✓</span> <strong>Provable security</strong> — reduces to ECDLP in ROM<br/>
+          <span class="badge-ok badge">✓</span> <strong>Linearity:</strong> s₁ + s₂ is valid for P₁ + P₂<br/>
+          → enables native multi-signatures (MuSig2)<br/>
+          <span class="badge-ok badge">✓</span> <strong>Non-malleable</strong> — unique (R, s) per (m, d, k)<br/>
+          <span class="badge-ok badge">✓</span> <strong>Batch verification</strong> — verify n sigs faster than n × single<br/>
+          <span class="badge-ok badge">✓</span> <strong>Fixed 64-byte</strong> encoding (vs. DER 70-72 bytes for ECDSA)
+        </p>
+      </div>
+      <div class="card small">
+        <strong>BIP 340 (Bitcoin Taproot):</strong> Adopted Schnorr over secp256k1 with x-only 32-byte public keys, tagged hashes for domain separation, and implicit even Y coordinates.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 11 : EdDSA / Ed25519                                    -->
+<!-- ============================================================ -->
+<section>
+  <h2>EdDSA — Ed25519 & Ed448</h2>
+  <p>A Schnorr variant on twisted Edwards curves, designed by Bernstein et al. (2011). Deterministic nonce, constant-time, misuse-resistant.</p>
+
+  <div class="grid2">
+    <div>
+      <div class="math-box">
+        <strong>Key generation:</strong><br/>
+        seed ← 32 random bytes<br/>
+        (a, prefix) = SHA-512(seed)<br/>
+        &nbsp;&nbsp;a: clamp bits (clear 0,1,2,255; set 254)<br/>
+        A = a · B &nbsp;&nbsp;<span class="muted">// public key (32 bytes)</span>
+      </div>
+      <div class="math-box">
+        <strong>Sign(m, seed):</strong><br/>
+        r = SHA-512(prefix ‖ m) mod ℓ &nbsp;&nbsp;<span class="muted accent2">// deterministic nonce!</span><br/>
+        R = r · B<br/>
+        h = SHA-512(R ‖ A ‖ m) mod ℓ<br/>
+        S = (r + h · a) mod ℓ<br/>
+        <strong>σ = (R, S)</strong> &nbsp;&nbsp;<span class="muted">// 64 bytes</span>
+      </div>
+      <div class="math-box">
+        <strong>Verify:</strong><br/>
+        h = SHA-512(R ‖ A ‖ m) mod ℓ<br/>
+        Check: <strong class="accent2">S · B = R + h · A</strong>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Ed25519 Parameters</h3>
+        <table>
+          <tr><td class="muted">Curve</td><td>edwards25519: −x² + y² = 1 + dx²y²</td></tr>
+          <tr><td class="muted">Field</td><td>𝔽<sub>p</sub>, p = 2<sup>255</sup> − 19</td></tr>
+          <tr><td class="muted">Order ℓ</td><td>2<sup>252</sup> + 27742…336 (≈252 bits)</td></tr>
+          <tr><td class="muted">Cofactor</td><td>h = 8</td></tr>
+          <tr><td class="muted">Hash</td><td>SHA-512</td></tr>
+          <tr><td class="muted">Key size</td><td>32 bytes private, 32 bytes public</td></tr>
+          <tr><td class="muted">Sig size</td><td>64 bytes</td></tr>
+          <tr><td class="muted">Security</td><td>~128-bit</td></tr>
+        </table>
+      </div>
+      <div class="ok-box small" style="margin-top:0.4em;">
+        <strong>Deterministic nonce:</strong> The nonce r is derived from hashing the private key prefix with the message. No RNG needed at signing time — immune to the PS3/Android Bitcoin nonce-reuse class of attacks.
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 12 : ECDSA vs EdDSA vs Schnorr COMPARISON               -->
+<!-- ============================================================ -->
+<section>
+  <h2>Scheme Comparison</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Property</th>
+        <th>ECDSA</th>
+        <th>EdDSA (Ed25519)</th>
+        <th>Schnorr (BIP 340)</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr><td>Curve family</td><td>Weierstrass (P-256, secp256k1)</td><td>Twisted Edwards (ed25519, ed448)</td><td>Weierstrass (secp256k1)</td></tr>
+      <tr><td>Nonce</td><td>Random (or RFC 6979)</td><td class="accent2">Deterministic (always)</td><td>Aux-randomized</td></tr>
+      <tr><td>Signature size</td><td>70–72 bytes (DER) / 64 (raw)</td><td class="accent2">64 bytes</td><td class="accent2">64 bytes</td></tr>
+      <tr><td>Public key size</td><td>33 bytes (compressed)</td><td>32 bytes</td><td class="accent2">32 bytes (x-only)</td></tr>
+      <tr><td>Provable security</td><td class="accent3">Not in standard model</td><td class="accent2">ROM (Schnorr-based)</td><td class="accent2">ROM</td></tr>
+      <tr><td>Signature malleability</td><td class="accent3">Yes (s → n − s)</td><td class="accent2">No</td><td class="accent2">No</td></tr>
+      <tr><td>Batch verification</td><td class="accent3">Not natively</td><td class="accent2">Yes</td><td class="accent2">Yes</td></tr>
+      <tr><td>Multi-signature</td><td class="accent3">Complex</td><td>Possible</td><td class="accent2">Native (MuSig2, FROST)</td></tr>
+      <tr><td>Public key recovery</td><td class="accent2">Yes (save bandwidth)</td><td class="accent3">No</td><td class="accent3">No</td></tr>
+      <tr><td>FIPS approved</td><td class="accent2">FIPS 186-5</td><td class="accent2">FIPS 186-5</td><td class="accent3">Not yet</td></tr>
+      <tr><td>Speed (sign, ed25519 ≈ 1.0×)</td><td>~1.2×</td><td class="accent2">1.0×</td><td>~1.1×</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 13 : THRESHOLD & MULTI-SIGNATURES                       -->
+<!-- ============================================================ -->
+<section>
+  <h2>Multi-Signatures & Threshold Signing</h2>
+  <p>Schnorr's linearity enables <span class="accent2">n-of-n</span> and <span class="accent">t-of-n</span> signing protocols that produce a <em>single standard signature</em>.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3>MuSig2 (n-of-n)</h3>
+      <p class="small">
+        ① Each signer i has keypair (dᵢ, Pᵢ)<br/>
+        ② Aggregate key: P<sub>agg</sub> = Σ aᵢ · Pᵢ &nbsp;<span class="muted">(with key aggregation coefficients aᵢ to prevent rogue-key attacks)</span><br/>
+        ③ Each signer provides two nonces per round (only 2 rounds!)<br/>
+        ④ Partial signatures: sᵢ = kᵢ + e · aᵢ · dᵢ<br/>
+        ⑤ Final: s = Σ sᵢ &nbsp;&nbsp;→ standard Schnorr sig (R, s)
+      </p>
+      <p class="tiny muted">Verifier sees single 64-byte signature, indistinguishable from solo Schnorr sig.</p>
+    </div>
+    <div class="card">
+      <h3>FROST (t-of-n)</h3>
+      <p class="small">
+        <strong>Flexible Round-Optimized Schnorr Threshold</strong> signatures allow any t of n participants to produce a valid signature.<br/><br/>
+        ① Distributed key generation (DKG) — each party gets a share<br/>
+        ② Signing requires only t signers (2-round protocol)<br/>
+        ③ Result: standard Schnorr signature — verifier is unaware of threshold<br/><br/>
+        <span class="badge-ok badge">USE CASE</span> Custody wallets, institutional signing, key escrow, MPC-TSS
+      </p>
+    </div>
+  </div>
+
+  <div class="card small" style="margin-top:0.4em;">
+    <h3>Blind & Ring Signatures</h3>
+    <p>
+      <strong class="accent">Blind signatures:</strong> Signer signs without seeing the message — used in anonymous credential schemes and e-cash (Chaum, 1983).<br/>
+      <strong class="accent4">Ring signatures:</strong> Prove membership in a set without revealing which member signed — used in Monero (CryptoNote) for transaction privacy.
+    </p>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 14 : STANDARDS LANDSCAPE                                -->
+<!-- ============================================================ -->
+<section>
+  <h2>Standards Landscape</h2>
+  <table>
+    <thead>
+      <tr><th>Standard</th><th>Algorithms</th><th>Status</th><th>Key Usage</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>FIPS 186-5</strong> (2023)</td>
+        <td>RSA-PSS, ECDSA, EdDSA</td>
+        <td><span class="badge-ok badge">Current</span></td>
+        <td>US federal, TLS, code signing, PKI</td>
+      </tr>
+      <tr>
+        <td><strong>RFC 6979</strong></td>
+        <td>Deterministic DSA/ECDSA</td>
+        <td><span class="badge-ok badge">Active</span></td>
+        <td>Constrained devices, test reproducibility</td>
+      </tr>
+      <tr>
+        <td><strong>RFC 8032</strong></td>
+        <td>Ed25519, Ed25519ph, Ed448</td>
+        <td><span class="badge-ok badge">Active</span></td>
+        <td>SSH, TLS 1.3, GnuPG, Signal, WireGuard</td>
+      </tr>
+      <tr>
+        <td><strong>SP 800-186</strong></td>
+        <td>Curve parameters (P-256, P-384, ed25519, ed448)</td>
+        <td><span class="badge-ok badge">Current</span></td>
+        <td>Companion to FIPS 186-5</td>
+      </tr>
+      <tr>
+        <td><strong>BIP 340</strong></td>
+        <td>Schnorr over secp256k1</td>
+        <td><span class="badge badge">Bitcoin</span></td>
+        <td>Bitcoin Taproot (activated Nov 2021)</td>
+      </tr>
+      <tr>
+        <td><strong>FIPS 204</strong> (2024)</td>
+        <td>ML-DSA (CRYSTALS-Dilithium)</td>
+        <td><span class="badge-purple badge">PQC</span></td>
+        <td>Post-quantum replacement for ECDSA</td>
+      </tr>
+      <tr>
+        <td><strong>FIPS 205</strong> (2024)</td>
+        <td>SLH-DSA (SPHINCS+)</td>
+        <td><span class="badge-purple badge">PQC</span></td>
+        <td>Hash-based PQ signatures (conservative)</td>
+      </tr>
+    </tbody>
+  </table>
+  <div class="card small" style="margin-top:0.4em;">
+    <strong>FIPS 186-5 key change:</strong> DSA is deprecated for new signatures (retained only for verification of legacy data). EdDSA (Ed25519, Ed448) added as FIPS-approved for the first time. Deterministic ECDSA explicitly approved per RFC 6979.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 15 : REAL-WORLD DEPLOYMENT MAP                          -->
+<!-- ============================================================ -->
+<section>
+  <h2>Where Signatures Live</h2>
+  <div class="grid3">
+    <div class="card" style="text-align:center;">
+      <p style="font-size:1.3em; margin:0;">🌐</p>
+      <h3>TLS 1.3</h3>
+      <p class="small">Server certificates signed with ECDSA P-256 or Ed25519. ~95% of HTTPS connections use EC-based signatures. Certificate Transparency logs record every signed cert.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <p style="font-size:1.3em; margin:0;">₿</p>
+      <h3>Blockchain</h3>
+      <p class="small">Bitcoin: ECDSA (secp256k1) + Schnorr (Taproot). Ethereum: ECDSA with public key recovery (saves 32 bytes per tx). Solana, Cosmos: Ed25519.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <p style="font-size:1.3em; margin:0;">🔑</p>
+      <h3>SSH / GPG</h3>
+      <p class="small">OpenSSH defaults to Ed25519 since 2014. GnuPG supports Ed25519 since 2.1. FIDO2/WebAuthn uses ECDSA P-256 for hardware security keys.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <p style="font-size:1.3em; margin:0;">📱</p>
+      <h3>Mobile / IoT</h3>
+      <p class="small">Apple Secure Enclave: ECDSA P-256. Android Keystore: ECDSA. ARM TrustZone: ECDSA/EdDSA via hardware crypto accelerators.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <p style="font-size:1.3em; margin:0;">📦</p>
+      <h3>Code Signing</h3>
+      <p class="small">Windows Authenticode, macOS codesign, Android APK signing, Linux kernel module signing — all use digital signatures to prevent supply-chain attacks.</p>
+    </div>
+    <div class="card" style="text-align:center;">
+      <p style="font-size:1.3em; margin:0;">🏛️</p>
+      <h3>PKI / Certificates</h3>
+      <p class="small">X.509 certificate chains: Root CA → Intermediate CA → Leaf. Each link is a digital signature (RSA or ECDSA) binding an entity to its public key.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 16 : HARDWARE ACCELERATOR ARCHITECTURES                 -->
+<!-- ============================================================ -->
+<section>
+  <h2>Hardware: ECDSA/EdDSA Accelerators</h2>
+  <p>Digital signature operations are bottlenecks in TLS handshakes, blockchain validation, and IoT authentication. Hardware acceleration is essential.</p>
+
+  <div class="grid2">
+    <div>
+      <svg viewBox="0 0 380 260" style="width:100%;">
+        <text class="label" x="190" y="18" text-anchor="middle" fill="#00e5ff" font-weight="700" font-size="13">ECDSA Accelerator Block Diagram</text>
+        <!-- Host interface -->
+        <rect class="node" x="10" y="30" width="100" height="40" rx="6"/>
+        <text class="label-sm" x="60" y="55" text-anchor="middle">Host / Bus</text>
+        <line x1="110" y1="50" x2="140" y2="50" stroke="#00e5ff" stroke-width="1.5" marker-end="url(#arrowBlue)"/>
+        <!-- Controller -->
+        <rect class="node" x="140" y="30" width="100" height="40" rx="6"/>
+        <text class="label-sm" x="190" y="55" text-anchor="middle">Controller FSM</text>
+        <!-- SHA engine -->
+        <rect class="node3" x="10" y="90" width="100" height="50" rx="6"/>
+        <text class="label-sm" x="60" y="110" text-anchor="middle">SHA-256</text>
+        <text class="label-sm" x="60" y="125" text-anchor="middle" fill="#ff6d00">Engine</text>
+        <!-- RNG -->
+        <rect class="node3" x="10" y="160" width="100" height="50" rx="6"/>
+        <text class="label-sm" x="60" y="180" text-anchor="middle">TRNG / DRBG</text>
+        <text class="label-sm" x="60" y="195" text-anchor="middle" fill="#ff6d00">Nonce gen</text>
+        <!-- Modular arithmetic -->
+        <rect class="node2" x="140" y="90" width="110" height="120" rx="6"/>
+        <text class="label-sm" x="195" y="110" text-anchor="middle" fill="#76ff03">Modular</text>
+        <text class="label-sm" x="195" y="125" text-anchor="middle" fill="#76ff03">Arithmetic Unit</text>
+        <text class="label-sm" x="195" y="145" text-anchor="middle">Add / Sub</text>
+        <text class="label-sm" x="195" y="160" text-anchor="middle">Multiply</text>
+        <text class="label-sm" x="195" y="175" text-anchor="middle">Inversion</text>
+        <text class="label-sm" x="195" y="190" text-anchor="middle">Montgomery</text>
+        <!-- EC point engine -->
+        <rect class="node" x="270" y="90" width="100" height="120" rx="6"/>
+        <text class="label-sm" x="320" y="110" text-anchor="middle">EC Point</text>
+        <text class="label-sm" x="320" y="125" text-anchor="middle">Arithmetic</text>
+        <text class="label-sm" x="320" y="150" text-anchor="middle">Point Add</text>
+        <text class="label-sm" x="320" y="165" text-anchor="middle">Point Double</text>
+        <text class="label-sm" x="320" y="180" text-anchor="middle">Scalar Mul</text>
+        <text class="label-sm" x="320" y="195" text-anchor="middle">(Montgomery</text>
+        <text class="label-sm" x="320" y="208" text-anchor="middle">Ladder)</text>
+        <!-- connections -->
+        <line x1="110" y1="115" x2="140" y2="115" stroke="#5a6a8a" stroke-width="1"/>
+        <line x1="110" y1="185" x2="140" y2="185" stroke="#5a6a8a" stroke-width="1"/>
+        <line x1="250" y1="150" x2="270" y2="150" stroke="#76ff03" stroke-width="1.5"/>
+        <line x1="190" y1="70" x2="190" y2="90" stroke="#5a6a8a" stroke-width="1"/>
+        <!-- Key storage -->
+        <rect class="node3" x="270" y="225" width="100" height="30" rx="6"/>
+        <text class="label-sm" x="320" y="245" text-anchor="middle" fill="#ff6d00">Key Storage</text>
+        <line x1="320" y1="225" x2="320" y2="210" stroke="#ff6d00" stroke-width="1"/>
+      </svg>
+    </div>
+    <div>
+      <div class="card small">
+        <h3>FPGA Results (Literature)</h3>
+        <table>
+          <tr><th>Platform</th><th>Curve</th><th>Sign</th><th>Verify</th><th>Slices</th></tr>
+          <tr><td>Virtex-5</td><td>K-163</td><td>0.27 ms</td><td>0.54 ms</td><td>18.5k</td></tr>
+          <tr><td>Virtex-6</td><td>B-163</td><td>0.8 ms</td><td>0.4 ms</td><td>~13k LUT</td></tr>
+          <tr><td>Alveo U250</td><td>P-256</td><td>—</td><td>0.76 ms</td><td>~50k LUT</td></tr>
+        </table>
+      </div>
+      <div class="card small">
+        <h3>ASIC Results</h3>
+        <table>
+          <tr><th>Process</th><th>Area</th><th>Freq</th><th>Power</th></tr>
+          <tr><td>45nm CMOS</td><td>0.257 mm²</td><td>532 MHz</td><td>63 mW</td></tr>
+          <tr><td>45nm (ECC only)</td><td>0.121 mm²</td><td>990 MHz</td><td>39 mW</td></tr>
+        </table>
+        <p class="tiny muted" style="margin-top:0.3em;">Key bottleneck: EC scalar multiplication dominates ~90% of signing time. Montgomery ladder preferred for constant-time (SPA-resistant) operation.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 17 : SIDE-CHANNEL ATTACKS                               -->
+<!-- ============================================================ -->
+<section>
+  <h2>Side-Channel Attacks & Countermeasures</h2>
+  <p>Signature implementations leak secrets through timing, power, and electromagnetic emanations.</p>
+
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h3 style="color:var(--accent3);">Attack Vectors</h3>
+        <p class="small">
+          <strong>Timing attacks:</strong> Non-constant-time modular inversion or conditional branches during scalar multiplication reveal bits of k or d.<br/><br/>
+          <strong>Simple Power Analysis (SPA):</strong> Single power trace distinguishes point-add (P+Q) from point-double (2P) in the double-and-add ladder.<br/><br/>
+          <strong>Differential Power Analysis (DPA):</strong> Statistical correlation across many traces recovers key bits.<br/><br/>
+          <strong>Electromagnetic (EM) attacks:</strong> Near-field probes capture leakage from on-chip wires.<br/><br/>
+          <strong>Fault injection:</strong> Voltage glitches or laser pulses skip instructions or corrupt intermediate values, enabling Bellcore-style attacks on deterministic ECDSA.
+        </p>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3 style="color:var(--accent2);">Countermeasures</h3>
+        <p class="small">
+          <strong>Constant-time code:</strong> No data-dependent branches or memory lookups. Ed25519 is designed for this — all operations are uniform.<br/><br/>
+          <strong>Montgomery ladder:</strong> Always performs both add and double, eliminating SPA distinguishability.<br/><br/>
+          <strong>Scalar blinding:</strong> Replace d with d + r·n (same result mod n, but randomized trace).<br/><br/>
+          <strong>Point blinding:</strong> Add random point before scalar mul, subtract after.<br/><br/>
+          <strong>Coordinate randomization:</strong> Multiply projective coordinates by random λ — changes power profile without affecting result.<br/><br/>
+          <strong>Redundant computation:</strong> Dual-rail logic, error detection codes for fault resistance. ~20% area overhead.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 18 : POST-QUANTUM SIGNATURES                            -->
+<!-- ============================================================ -->
+<section>
+  <h2>Post-Quantum: ML-DSA & SLH-DSA</h2>
+  <p>Shor's algorithm breaks ECDSA/EdDSA/Schnorr on a cryptographically relevant quantum computer. NIST has standardized replacements.</p>
+
+  <div class="grid2">
+    <div class="card">
+      <h3 style="color:var(--accent4);">ML-DSA — FIPS 204 (2024)</h3>
+      <p class="small">
+        Based on <strong>Module Learning With Errors</strong> (MLWE) lattice problem.<br/>
+        Derived from CRYSTALS-Dilithium submission.<br/><br/>
+      </p>
+      <table class="small">
+        <tr><th>Parameter Set</th><th>Security</th><th>PK</th><th>Sig</th><th>SK</th></tr>
+        <tr><td>ML-DSA-44</td><td>128-bit</td><td>1,312 B</td><td>2,420 B</td><td>2,560 B</td></tr>
+        <tr><td>ML-DSA-65</td><td>192-bit</td><td>1,952 B</td><td>3,293 B</td><td>4,032 B</td></tr>
+        <tr><td>ML-DSA-87</td><td>256-bit</td><td>2,592 B</td><td>4,595 B</td><td>4,896 B</td></tr>
+      </table>
+      <p class="tiny muted">Sign: ~100 µs (software). Verify: ~50 µs. Competitive with ECDSA for speed, but much larger keys and signatures.</p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--accent4);">SLH-DSA — FIPS 205 (2024)</h3>
+      <p class="small">
+        Based on <strong>hash functions only</strong> (SPHINCS+).<br/>
+        Conservative assumption: only needs hash collision/preimage resistance.<br/><br/>
+      </p>
+      <table class="small">
+        <tr><th>Parameter Set</th><th>Security</th><th>PK</th><th>Sig</th></tr>
+        <tr><td>SLH-DSA-128s</td><td>128-bit</td><td>32 B</td><td>7,856 B</td></tr>
+        <tr><td>SLH-DSA-128f</td><td>128-bit</td><td>32 B</td><td>17,088 B</td></tr>
+        <tr><td>SLH-DSA-256s</td><td>256-bit</td><td>64 B</td><td>29,792 B</td></tr>
+      </table>
+      <p class="tiny muted">Very slow signing (~100 ms) but tiny public keys. s = small sigs, f = fast signing.</p>
+    </div>
+  </div>
+
+  <div class="warn-box small" style="margin-top:0.4em;">
+    <strong>Size penalty:</strong> An Ed25519 signature is 64 bytes. ML-DSA-44 is 2,420 bytes (38×). This is a major concern for bandwidth-constrained protocols (blockchains, IoT). Hybrid schemes combining classical + PQ signatures are being deployed during the transition.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 19 : INTERACTIVE DEMO — ECDSA SIMULATOR                -->
+<!-- ============================================================ -->
+<section>
+  <h2>Interactive: ECDSA Signing Simulator</h2>
+  <p class="small">Simplified ECDSA over a tiny curve for educational purposes. Uses a toy prime field.</p>
+
+  <div class="interactive-demo">
+    <div class="grid2">
+      <div>
+        <label class="small accent">Message:</label><br/>
+        <input type="text" id="ecdsaMsg" value="Hello, Cryptography!" style="margin-bottom:0.3em;"/><br/>
+        <label class="small accent">Private key d (integer):</label><br/>
+        <input type="text" id="ecdsaPriv" value="7" style="margin-bottom:0.3em;"/><br/>
+        <button onclick="ecdsaDemo()">🖊️ Sign</button>
+        <button onclick="ecdsaVerifyDemo()">✓ Verify</button>
+        <button onclick="ecdsaTamperDemo()">🔓 Tamper & Verify</button>
+      </div>
+      <div>
+        <div id="ecdsaOutput" class="output" style="min-height:160px;">
+          <span class="muted">Press "Sign" to generate an ECDSA signature...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <p class="tiny muted" style="margin-top:0.3em;">
+    Toy curve: y² = x³ + 2x + 3 mod 97, Generator G = (3, 6), order n = 5 (very small for demonstration). Real ECDSA uses 256-bit primes.
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 20 : PYTHON IMPLEMENTATION                              -->
+<!-- ============================================================ -->
+<section>
+  <h2>Python: Ed25519 Signing</h2>
+  <pre><code class="language-python" data-trim data-noescape>
+import hashlib, os
+
+# --- Ed25519 via Python's standard library (3.6+) ---
+from cryptography.hazmat.primitives.asymmetric.ed25519 import (
+    Ed25519PrivateKey, Ed25519PublicKey
+)
+from cryptography.hazmat.primitives import serialization
+
+# Key generation
+private_key = Ed25519PrivateKey.generate()
+public_key  = private_key.public_key()
+
+# Sign
+message   = b"Digital signatures are provably secure"
+signature = private_key.sign(message)  # 64 bytes, deterministic
+
+print(f"Public key : {public_key.public_bytes_raw().hex()}")
+print(f"Signature  : {signature.hex()}")
+print(f"Sig length : {len(signature)} bytes")
+
+# Verify
+try:
+    public_key.verify(signature, message)
+    print("✓ Signature valid")
+except Exception:
+    print("✗ Signature INVALID")
+
+# Tamper test
+try:
+    public_key.verify(signature, b"Tampered message!")
+    print("✓ Signature valid")       # Should NOT reach here
+except Exception:
+    print("✗ Tampered message detected — signature invalid")
+  </code></pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 21 : PYTHON ECDSA IMPLEMENTATION                        -->
+<!-- ============================================================ -->
+<section>
+  <h2>Python: ECDSA (P-256) Low-Level</h2>
+  <pre><code class="language-python" data-trim data-noescape>
+from cryptography.hazmat.primitives.asymmetric import ec
+from cryptography.hazmat.primitives import hashes
+from cryptography.hazmat.backends import default_backend
+
+# Key generation on NIST P-256
+private_key = ec.generate_private_key(ec.SECP256R1(), default_backend())
+public_key  = private_key.public_key()
+
+# Extract private scalar d
+d = private_key.private_numbers().private_value
+print(f"Private key d: {d:#066x}")
+
+# Sign (uses RFC 6979 deterministic nonce internally)
+message   = b"ECDSA on NIST P-256"
+signature = private_key.sign(message, ec.ECDSA(hashes.SHA256()))
+
+print(f"Signature (DER): {signature.hex()}")
+print(f"DER length: {len(signature)} bytes")  # 70-72 bytes
+
+# Decode (r, s) from DER
+from cryptography.hazmat.primitives.asymmetric.utils import decode_dss_signature
+r, s = decode_dss_signature(signature)
+print(f"r = {r:#066x}")
+print(f"s = {s:#066x}")
+
+# Verify
+public_key.verify(signature, message, ec.ECDSA(hashes.SHA256()))
+print("✓ ECDSA signature verified")
+  </code></pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 22 : SYSTEMVERILOG — MODULAR INVERSE                    -->
+<!-- ============================================================ -->
+<section>
+  <h2>SystemVerilog: Modular Inverse</h2>
+  <p class="small">The modular inverse k⁻¹ mod n is the most expensive non-EC operation in ECDSA signing. Fermat's little theorem: k⁻¹ = k<sup>n−2</sup> mod n.</p>
+  <pre><code class="language-verilog" data-trim data-noescape>
+module mod_inverse #(
+    parameter int WIDTH = 256
+)(
+    input  logic                clk,
+    input  logic                rst_n,
+    input  logic                start,
+    input  logic [WIDTH-1:0]    k,        // value to invert
+    input  logic [WIDTH-1:0]    n,        // modulus (curve order)
+    output logic [WIDTH-1:0]    k_inv,    // k^{-1} mod n
+    output logic                done
+);
+    // Fermat's little theorem: k^{-1} = k^{n-2} mod n
+    // Uses Montgomery modular exponentiation (square-and-multiply)
+
+    logic [WIDTH-1:0] exp;       // exponent = n - 2
+    logic [WIDTH-1:0] base_reg;  // current base (squared each cycle)
+    logic [WIDTH-1:0] result;    // accumulator
+    logic [$clog2(WIDTH)-1:0] bit_idx;
+    logic running;
+
+    assign exp = n - 2;
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) begin
+            done    <= 1'b0;
+            running <= 1'b0;
+        end else if (start) begin
+            base_reg <= k;
+            result   <= {{(WIDTH-1){1'b0}}, 1'b1};  // 1
+            bit_idx  <= '0;
+            running  <= 1'b1;
+            done     <= 1'b0;
+        end else if (running) begin
+            // Square-and-multiply: check bit_idx of exponent
+            if (exp[bit_idx])
+                result <= mont_mul(result, base_reg, n);
+            base_reg <= mont_mul(base_reg, base_reg, n);
+            if (bit_idx == WIDTH - 1) begin
+                running <= 1'b0;
+                done    <= 1'b1;
+            end
+            bit_idx <= bit_idx + 1;
+        end
+    end
+
+    assign k_inv = result;
+
+    // Montgomery multiplication (simplified — see Presentation 01)
+    function automatic logic [WIDTH-1:0] mont_mul(
+        input logic [WIDTH-1:0] a, b, m
+    );
+        // ... full Montgomery reduction pipeline ...
+        return (a * b) % m;  // placeholder for synthesis
+    endfunction
+endmodule
+  </code></pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 23 : SV — ECDSA TOP-LEVEL                               -->
+<!-- ============================================================ -->
+<section>
+  <h2>SystemVerilog: ECDSA Sign Top-Level</h2>
+  <pre><code class="language-verilog" data-trim data-noescape>
+module ecdsa_sign_top #(
+    parameter int N = 256  // Curve order bit-width
+)(
+    input  logic             clk, rst_n, start,
+    input  logic [N-1:0]     msg_hash,    // e = H(m), pre-computed
+    input  logic [N-1:0]     priv_key,    // d
+    input  logic [N-1:0]     nonce_k,     // k (from TRNG or RFC 6979)
+    // Curve parameters loaded via config registers (omitted)
+    output logic [N-1:0]     sig_r,
+    output logic [N-1:0]     sig_s,
+    output logic             valid
+);
+    typedef enum logic [2:0] {
+        IDLE, SCALAR_MUL, CALC_R, MOD_INV, CALC_S, DONE
+    } state_t;
+
+    state_t state;
+    logic [N-1:0] kG_x;       // x-coord of k·G
+    logic [N-1:0] k_inv;      // k^{-1} mod n
+    logic ec_done, inv_done;
+
+    // Sub-modules (instantiation ports abbreviated)
+    ec_point_mul   #(.N(N)) u_pmul  (.*);  // k·G → (kG_x, kG_y)
+    mod_inverse    #(.WIDTH(N)) u_inv(.*);  // k^{-1} mod n
+
+    always_ff @(posedge clk or negedge rst_n) begin
+        if (!rst_n) state <= IDLE;
+        else case (state)
+            IDLE:       if (start) state <= SCALAR_MUL;
+            SCALAR_MUL: if (ec_done)  state <= CALC_R;
+            CALC_R: begin
+                sig_r <= kG_x % curve_n;  // r = x₁ mod n
+                state <= (sig_r == 0) ? IDLE : MOD_INV;
+            end
+            MOD_INV:    if (inv_done) state <= CALC_S;
+            CALC_S: begin
+                // s = k⁻¹ · (e + r·d) mod n
+                sig_s <= mont_mul(k_inv,
+                    mont_add(msg_hash, mont_mul(sig_r, priv_key)));
+                state <= (sig_s == 0) ? IDLE : DONE;
+            end
+            DONE: begin valid <= 1'b1; state <= IDLE; end
+        endcase
+    end
+endmodule
+  </code></pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 24 : PERFORMANCE COMPARISON TABLE                       -->
+<!-- ============================================================ -->
+<section>
+  <h2>Performance Comparison</h2>
+  <table>
+    <thead>
+      <tr><th>Implementation</th><th>Algorithm</th><th>Sign</th><th>Verify</th><th>Throughput</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>OpenSSL 3.x (x86-64)</td><td>ECDSA P-256</td><td>~55 µs</td><td>~175 µs</td><td>~18k sign/s</td></tr>
+      <tr><td>OpenSSL 3.x (x86-64)</td><td>Ed25519</td><td>~42 µs</td><td>~115 µs</td><td>~24k sign/s</td></tr>
+      <tr><td>libsodium (x86-64)</td><td>Ed25519</td><td>~32 µs</td><td>~88 µs</td><td>~31k sign/s</td></tr>
+      <tr><td>Bitcoin Core (x86-64)</td><td>Schnorr secp256k1</td><td>~48 µs</td><td>~52 µs</td><td>~19k verify/s</td></tr>
+      <tr><td class="accent">FPGA Virtex-5</td><td>ECDSA K-163</td><td>~270 µs</td><td>~540 µs</td><td>~1.8k sign/s</td></tr>
+      <tr><td class="accent">FPGA Alveo U250</td><td>ECDSA P-256</td><td>—</td><td>~760 µs</td><td>~1.3k verify/s</td></tr>
+      <tr><td class="accent2">ASIC 45nm</td><td>ECDSA B-163</td><td>~6 µs</td><td>—</td><td>~160k sign/s</td></tr>
+      <tr><td class="accent4">Software (ref)</td><td>ML-DSA-44</td><td>~100 µs</td><td>~50 µs</td><td>~10k sign/s</td></tr>
+      <tr><td class="accent4">ASIC PQ (12nm)</td><td>ML-DSA-87</td><td>~97 µs</td><td>~58 µs</td><td>~10k sign/s</td></tr>
+    </tbody>
+  </table>
+  <div class="card small" style="margin-top:0.3em;">
+    <strong>Key takeaway:</strong> Software Ed25519 is the fastest classical scheme. ASICs can achieve 160k+ signatures/second for ECDSA. ML-DSA hardware is catching up — post-layout ASIC results show competitive latency with ~10× larger area than ECDSA accelerators.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 25 : ATTACKS — HISTORICAL                               -->
+<!-- ============================================================ -->
+<section>
+  <h2>Notable Attacks & Failures</h2>
+  <div class="grid2">
+    <div class="card">
+      <h3 style="color:var(--accent3);">Sony PS3 (2010)</h3>
+      <p class="small">
+        Sony used a <strong>static nonce k</strong> for signing PS3 firmware updates with ECDSA. The fail0verflow group recovered the private key instantly using the nonce-reuse equation. Result: full PS3 jailbreak, homebrew code execution.
+      </p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--accent3);">Android Bitcoin Wallets (2013)</h3>
+      <p class="small">
+        Android's <code>SecureRandom</code> had a flaw producing insufficient entropy for ECDSA nonces. Multiple Bitcoin wallets generated duplicate k values, allowing attackers to extract private keys and steal funds.
+      </p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--accent3);">ROCA (2017)</h3>
+      <p class="small">
+        Infineon TPMs generated RSA keys with low-entropy primes. Though not ECDSA-specific, it demonstrates how hardware RNG flaws undermine any signature scheme. Estonian e-ID cards were vulnerable.
+      </p>
+    </div>
+    <div class="card">
+      <h3 style="color:var(--accent3);">Minerva (2019)</h3>
+      <p class="small">
+        Timing side-channel in a smart card's ECDSA implementation leaked nonce bits through variable-time modular reduction. ~10,000 signatures were enough to recover the private key via lattice attacks (Hidden Number Problem).
+      </p>
+    </div>
+  </div>
+  <div class="ok-box small" style="margin-top:0.4em;">
+    <strong>Lesson:</strong> The <em>mathematics</em> of ECDSA/EdDSA are sound. Nearly all real-world breaks exploit <strong>implementation failures</strong>: bad RNG, nonce reuse, non-constant-time code, or faulty hardware. EdDSA's deterministic nonce eliminates the largest class of these failures by design.
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 26 : SUMMARY & KEY TAKEAWAYS                            -->
+<!-- ============================================================ -->
+<section>
+  <h2>Key Takeaways</h2>
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h3>Core Concepts</h3>
+        <p class="small">
+          ▸ Digital signatures provide authentication, integrity, and non-repudiation<br/>
+          ▸ All modern schemes use hash-then-sign over elliptic curve groups<br/>
+          ▸ ECDSA, EdDSA, and Schnorr are all rooted in ElGamal's framework<br/>
+          ▸ The ECDLP trapdoor: Q = d·G is easy; recovering d from Q is infeasible<br/>
+          ▸ Nonce security is paramount — reuse leaks the private key
+        </p>
+      </div>
+      <div class="card">
+        <h3>Recommendations</h3>
+        <p class="small">
+          <span class="badge-ok badge">Best</span> Ed25519 for new systems (fast, deterministic, misuse-resistant)<br/>
+          <span class="badge-ok badge">Good</span> ECDSA P-256 for FIPS compliance and existing infrastructure<br/>
+          <span class="badge badge">BTC</span> Schnorr (BIP 340) for Bitcoin/Taproot ecosystems<br/>
+          <span class="badge-purple badge">Future</span> ML-DSA for post-quantum readiness (FIPS 204)
+        </p>
+      </div>
+    </div>
+    <div>
+      <div class="card">
+        <h3>Standards</h3>
+        <p class="small">
+          ▸ <strong>FIPS 186-5 (2023):</strong> ECDSA + EdDSA approved; DSA deprecated<br/>
+          ▸ <strong>RFC 8032:</strong> Ed25519 & Ed448 specification<br/>
+          ▸ <strong>RFC 6979:</strong> Deterministic ECDSA nonce generation<br/>
+          ▸ <strong>FIPS 204/205 (2024):</strong> ML-DSA & SLH-DSA for post-quantum
+        </p>
+      </div>
+      <div class="card">
+        <h3>Hardware</h3>
+        <p class="small">
+          ▸ EC scalar multiplication dominates ~90% of sign/verify time<br/>
+          ▸ Montgomery ladder preferred for constant-time (SPA-resistant) operation<br/>
+          ▸ ASIC 45nm achieves ~160k ECDSA signatures/second<br/>
+          ▸ Post-quantum ML-DSA accelerators emerging (0.23 mm², 1.2 GHz)
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 27 : REFERENCES                                         -->
+<!-- ============================================================ -->
+<section>
+  <h2>References</h2>
+  <div class="small" style="column-count:2; column-gap:2em;">
+    <p><strong>Standards:</strong><br/>
+    FIPS 186-5, Digital Signature Standard (2023)<br/>
+    NIST SP 800-186, Elliptic Curve Domain Parameters (2023)<br/>
+    RFC 6979, Deterministic DSA/ECDSA (2013)<br/>
+    RFC 8032, Edwards-Curve Digital Signature Algorithm (2017)<br/>
+    BIP 340, Schnorr Signatures for secp256k1 (2021)<br/>
+    FIPS 204, Module-Lattice-Based Digital Signature Standard (2024)<br/>
+    FIPS 205, Stateless Hash-Based Digital Signature Standard (2024)</p>
+
+    <p><strong>Papers:</strong><br/>
+    ElGamal, "A Public Key Cryptosystem…" IEEE ToIT (1985)<br/>
+    Schnorr, "Efficient Signature Generation…" J. Cryptology (1991)<br/>
+    Johnson, Menezes, Vanstone, "The ECDSA," IJIS (2001)<br/>
+    Bernstein et al., "High-speed high-security signatures," CHES (2011)<br/>
+    Nick, Ruffing, Seurin, "MuSig2," CRYPTO (2021)<br/>
+    Komlo, Goldberg, "FROST," SAC (2020)<br/>
+    Ducas et al., "CRYSTALS-Dilithium," TCHES (2018)</p>
+
+    <p><strong>Implementation:</strong><br/>
+    libsodium — Ed25519 reference library<br/>
+    OpenSSL 3.x — ECDSA/EdDSA provider<br/>
+    Bitcoin Core — secp256k1 + Schnorr library<br/>
+    "Fast Hardware Implementation of ECDSA" — IEEE (2016)<br/>
+    "Lightweight HW Accelerator for PQ Digital Signature" — IACR ePrint (2022)</p>
+  </div>
+</section>
+
+</div><!-- /.slides -->
+</div><!-- /.reveal -->
+
+<!-- ============================================================ -->
+<!-- REVEAL.JS + PLUGINS                                           -->
+<!-- ============================================================ -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/highlight/highlight.min.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  slideNumber: 'c/t',
+  width: 1100,
+  height: 700,
+  margin: 0.06,
+  transition: 'slide',
+  backgroundTransition: 'fade',
+  plugins: [ RevealHighlight ]
+});
+</script>
+
+<!-- ============================================================ -->
+<!-- INTERACTIVE ECDSA DEMO (Toy curve)                            -->
+<!-- ============================================================ -->
+<script>
+// Tiny elliptic curve for demo: y² = x³ + 2x + 3 mod 97
+// Generator G = (3, 6), order n = 5 (toy values!)
+const P = 97, A_COEFF = 2, B_COEFF = 3, GX = 3, GY = 6, N_ORDER = 5;
+
+function modPow(base, exp, mod) {
+  let result = 1n;
+  base = ((base % mod) + mod) % mod;
+  while (exp > 0n) {
+    if (exp % 2n === 1n) result = (result * base) % mod;
+    exp = exp / 2n;
+    base = (base * base) % mod;
+  }
+  return result;
+}
+
+function modInv(a, m) {
+  a = ((a % m) + m) % m;
+  return Number(modPow(BigInt(a), BigInt(m) - 2n, BigInt(m)));
+}
+
+function ecAdd(x1, y1, x2, y2) {
+  if (x1 === null) return [x2, y2];
+  if (x2 === null) return [x1, y1];
+  let lam;
+  if (x1 === x2 && y1 === y2) {
+    lam = ((3 * x1 * x1 + A_COEFF) * modInv(2 * y1, P)) % P;
+  } else if (x1 === x2) {
+    return [null, null]; // point at infinity
+  } else {
+    lam = (((y2 - y1) % P + P) * modInv((x2 - x1 + P) % P, P)) % P;
+  }
+  lam = ((lam % P) + P) % P;
+  let x3 = ((lam * lam - x1 - x2) % P + P) % P;
+  let y3 = ((lam * (x1 - x3) - y1) % P + P) % P;
+  return [x3, y3];
+}
+
+function ecMul(k, gx, gy) {
+  let rx = null, ry = null;
+  let qx = gx, qy = gy;
+  while (k > 0) {
+    if (k & 1) [rx, ry] = ecAdd(rx, ry, qx, qy);
+    [qx, qy] = ecAdd(qx, qy, qx, qy);
+    k >>= 1;
+  }
+  return [rx, ry];
+}
+
+function simpleHash(msg) {
+  let h = 0;
+  for (let i = 0; i < msg.length; i++) h = (h * 31 + msg.charCodeAt(i)) % N_ORDER;
+  return h === 0 ? 1 : h;
+}
+
+let lastSig = null;
+
+function ecdsaDemo() {
+  const msg = document.getElementById('ecdsaMsg').value;
+  const d = parseInt(document.getElementById('ecdsaPriv').value) % N_ORDER || 1;
+  const [qx, qy] = ecMul(d, GX, GY);
+  const e = simpleHash(msg);
+  const k = 1 + (Date.now() % (N_ORDER - 1));
+  const [kGx, kGy] = ecMul(k, GX, GY);
+  const r = kGx % N_ORDER;
+  if (r === 0) { ecdsaDemo(); return; }
+  const kInv = modInv(k, N_ORDER);
+  const s = (kInv * ((e + r * d) % N_ORDER)) % N_ORDER;
+  if (s === 0) { ecdsaDemo(); return; }
+  lastSig = { r, s, msg, qx, qy, e, k, d };
+
+  document.getElementById('ecdsaOutput').innerHTML =
+    `<span style="color:#00e5ff">── Key Generation ──</span>\n` +
+    `Private key d = ${d}\n` +
+    `Public key Q  = (${qx}, ${qy})\n\n` +
+    `<span style="color:#76ff03">── Signing ──</span>\n` +
+    `Message: "${msg}"\n` +
+    `Hash e     = H(m) = ${e}\n` +
+    `Nonce k    = ${k}\n` +
+    `k·G        = (${kGx}, ${kGy})\n` +
+    `r = x₁ mod n = ${r}\n` +
+    `s = k⁻¹·(e + r·d) mod n = ${s}\n\n` +
+    `<span style="color:#76ff03;font-weight:700">Signature σ = (r=${r}, s=${s})</span>`;
+}
+
+function ecdsaVerifyDemo() {
+  if (!lastSig) { alert('Sign first!'); return; }
+  const { r, s, msg, qx, qy, e } = lastSig;
+  const w = modInv(s, N_ORDER);
+  const u1 = (e * w) % N_ORDER;
+  const u2 = (r * w) % N_ORDER;
+  const [p1x, p1y] = ecMul(u1, GX, GY);
+  const [p2x, p2y] = ecMul(u2, qx, qy);
+  const [vx, vy] = ecAdd(p1x, p1y, p2x, p2y);
+  const v = vx % N_ORDER;
+  const valid = v === r;
+
+  document.getElementById('ecdsaOutput').innerHTML +=
+    `\n\n<span style="color:#00e5ff">── Verification ──</span>\n` +
+    `w = s⁻¹ mod n = ${w}\n` +
+    `u₁ = e·w = ${u1}, u₂ = r·w = ${u2}\n` +
+    `u₁·G + u₂·Q = (${vx}, ${vy})\n` +
+    `x₁ mod n = ${v}\n` +
+    (valid
+      ? `<span style="color:#76ff03;font-weight:700">✓ VALID — x₁ mod n (${v}) = r (${r})</span>`
+      : `<span style="color:#ff6d00;font-weight:700">✗ INVALID</span>`);
+}
+
+function ecdsaTamperDemo() {
+  if (!lastSig) { alert('Sign first!'); return; }
+  const { r, s, qx, qy } = lastSig;
+  const tamperedMsg = lastSig.msg + '!';
+  const e2 = simpleHash(tamperedMsg);
+  const w = modInv(s, N_ORDER);
+  const u1 = (e2 * w) % N_ORDER;
+  const u2 = (r * w) % N_ORDER;
+  const [p1x, p1y] = ecMul(u1, GX, GY);
+  const [p2x, p2y] = ecMul(u2, qx, qy);
+  const [vx, vy] = ecAdd(p1x, p1y, p2x, p2y);
+  const v = vx !== null ? vx % N_ORDER : -1;
+  const valid = v === r;
+
+  document.getElementById('ecdsaOutput').innerHTML +=
+    `\n\n<span style="color:#ff6d00">── Tamper Test ──</span>\n` +
+    `Tampered msg: "${tamperedMsg}"\n` +
+    `New hash e' = ${e2}\n` +
+    `Verification point = (${vx}, ${vy})\n` +
+    `x₁ mod n = ${v}\n` +
+    (valid
+      ? `<span style="color:#ff6d00;font-weight:700">✗ FALSE POSITIVE (unlikely!)</span>`
+      : `<span style="color:#ff6d00;font-weight:700">✗ INVALID — tampering detected! (${v} ≠ ${r})</span>`);
+}
+</script>
+
+</body>
+</html>
