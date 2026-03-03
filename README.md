@@ -15,7 +15,7 @@ Interactive slide decks covering modern cryptographic systems end-to-end — fro
 | # | Topic | Slides | Status |
 | --- | --- | --- | --- |
 | 01 | Finite Field Arithmetic for Cryptography | 16 | ✅ Complete |
-| 02 | Elliptic Curve Cryptography (ECC) | — | Planned |
+| 02 | Elliptic Curve Cryptography (ECC) | 38 | ✅ Complete |
 | 03 | AES — Design & Implementation | — | Planned |
 | 04 | Hash Functions & MACs | — | Planned |
 | 05 | Public Key Cryptography (RSA, DH) | — | Planned |
@@ -42,6 +42,36 @@ Interactive slide decks covering modern cryptographic systems end-to-end — fro
 **Code** — Complete SystemVerilog GF(2⁸) multiplier, parameterized modular add/subtract modules, Python GF(2⁸) and GF(p) classes with Fermat inverse.
 
 **Performance** — Throughput comparison from 3.2 Gbps (OpenSSL) to 53 Gbps (45nm ASIC), with area/speed/side-channel trade-off analysis.
+
+---
+
+## Presentation 02: Elliptic Curve Cryptography
+
+38 interactive slides covering:
+
+**Foundations** — Elliptic curves over ℝ with geometric intuition: the chord-and-tangent group law for point addition and doubling. Algebraic addition formulas with detailed derivation. The point at infinity as identity element. Non-singularity condition and discriminant.
+
+**Curves over Finite Fields** — Transition from ℝ to 𝔽ₚ with Hasse's theorem bounding group order. The Elliptic Curve Discrete Logarithm Problem (ECDLP) and why it provides a trapdoor. Security level analysis: 256-bit curve → 128-bit security via Pollard's ρ.
+
+**Scalar Multiplication** — Binary double-and-add (left-to-right), Non-Adjacent Form (NAF) with density 1/3, windowed w-NAF with precomputation. The Montgomery ladder for constant-time, SPA-resistant computation using x-only differential addition.
+
+**Curve Forms** — Short Weierstrass (y² = x³ + ax + b): NIST P-curves, Jacobian/projective coordinates, a = −3 optimization, incomplete addition formulas and the Renes-Costello-Batina 2016 complete formulas. Montgomery curves (Bv² = u³ + Au² + u): x-only arithmetic, differential addition, Curve25519 and Curve448. Twisted Edwards curves (ax² + y² = 1 + dx²y²): complete addition law when d is non-square, unified add/double, extended coordinates, edwards25519. Birational equivalence maps between all three forms.
+
+**Coordinate Systems** — Six systems compared: affine, projective, Jacobian, extended Edwards, Montgomery x-only, Co-Z. Operation counts (M, S, I) for each. Strategy: projective throughout, single final inversion.
+
+**Standards** — NIST P-256/P-384/P-521, Curve25519/Curve448, edwards25519/edwards448, secp256k1, BrainpoolP256r1. NIST SP 800-186 (2023), FIPS 186-5, RFC 7748, RFC 8032. Curve25519 design rationale: prime shape (2²⁵⁵ − 19), scalar clamping, twist security, minimal A = 486662.
+
+**Protocols** — ECDH key agreement with worked Alice–Bob flow for both X25519 (RFC 7748) and NIST P-256 (with validation requirements). ECDSA signing and verification with full mathematical walkthrough, nonce criticality, and RFC 6979 deterministic variant. EdDSA/Ed25519 (RFC 8032): deterministic Schnorr-type signatures, cofactored verification, comparison table vs ECDSA across 8 properties.
+
+**Attacks & Security** — Eight attack classes: Baby-Step Giant-Step, Pollard's ρ, Pohlig-Hellman (smooth order), MOV/Frey-Rück (low embedding degree), Smart's anomalous attack (#E = p), invalid curve attacks, small subgroup attacks, Shor's quantum algorithm. SafeCurves criteria (Bernstein & Lange). Real-world failures: Sony PS3 nonce reuse (2010), Android Bitcoin wallet RNG (2013), Minerva timing (2019), Dual_EC_DRBG NSA backdoor (2013).
+
+**Hardware** — Three-level accelerator hierarchy (scalar mult → point ops → modular arithmetic → big-integer). Montgomery modular multiplication algorithm and four hardware variants (bit-serial to full-parallel). FPGA results: P-256 from 5.26 ms (Virtex-5) to 0.56 ms (Virtex-7, 23.7k LUTs). ASIC results: unified Curve25519+Curve448 at 28nm (1096 kGE, 0.43 ms), low-power Curve25519 at 65nm (49 kGE). Side-channel countermeasure table: scalar blinding, point blinding, projective coordinate randomization, constant-time operations, fault detection.
+
+**Code** — SystemVerilog Montgomery modular multiplier (parameterized N-bit). Jacobian point addition scheduler with FSM and parallel multiplier scheduling. Python ECDH on a toy curve (y² = x³ + 2x + 3 mod 97) with complete point arithmetic.
+
+**Interactive** — Canvas-based point visualizer for E(𝔽₉₇) with click-to-select addition and doubling. Scalar multiplication kG slider showing trail of intermediate points with binary decomposition. Animated group law illustration cycling through addition, doubling, and inversion. All 100 curve points enumerated.
+
+**Deployment** — ECC in TLS 1.3 (X25519 key exchange + Ed25519 signatures), SSH, Bitcoin/Ethereum (secp256k1), Signal/WhatsApp, WireGuard, FIDO2/Passkeys, Tor, smart cards, IoT. ECC vs RSA performance comparison at 128-bit security. Quantum threat: Shor's algorithm resource estimates, CNSA 2.0 timeline, hybrid X25519+ML-KEM-768 transition.
 
 ---
 
@@ -87,11 +117,9 @@ Interactive slide decks covering modern cryptographic systems end-to-end — fro
 
 **Interactive Comparisons** — Switchable bar charts comparing public key, secret key, and ciphertext/signature sizes across all PQC and classical algorithms. Performance benchmarks: ML-KEM vs. X25519 vs. RSA-2048; ML-DSA vs. Ed25519.
 
-**Hardware Implementation** — NTT accelerator architecture for SoC/FPGA/ASIC. Barrett reduction in ℤ₃₃₂₉. Keccak/SHAKE co-processors. Cortex-M4, Artix-7, and 28nm ASIC benchmarks.
+**Hardware** — NTT butterfly architectures for ML-KEM/ML-DSA: iterative, pipelined, mixed-radix. Keccak/SHA-3 core integration. FPGA and ASIC implementation results with area-time product comparisons. PQC + RISC-V integration strategies.
 
-**Code** — Python NTT implementation in ℤ₃₃₂₉ with bit-reversed twiddle factors. Pedagogical ML-KEM key generation sketch with CBD sampling.
-
-**Migration** — Hybrid TLS 1.3 key exchange (X25519 + ML-KEM-768). Three-phase migration roadmap. Crypto-agility design principles. Algorithm decision matrix.
+**Migration** — Hybrid key exchange (X25519 + ML-KEM-768 in TLS 1.3). Certificate chain impacts. CNSA 2.0 timeline and backward compatibility challenges.
 
 ---
 
@@ -148,6 +176,8 @@ Interactive slide decks covering modern cryptographic systems end-to-end — fro
 ├── README.md                                     ← This file
 ├── 01-finite-field-arithmetic/
 │   └── index.html                                ← Reveal.js interactive slide deck
+├── 02-elliptic-curve-cryptography/
+│   └── index.html                                ← Reveal.js interactive slide deck
 ├── 06-digital-signatures/
 │   └── index.html                                ← Reveal.js interactive slide deck
 ├── 07-post-quantum-cryptography/
@@ -176,6 +206,8 @@ Each presentation is a single self-contained `index.html`. No build step, no npm
 ## References
 
 **Presentation 01:** FIPS 197 (AES) · NIST SP 800-186 (ECC Curves) · RFC 7748 (Curve25519/448) · FIPS 186-5 (DSS) · Canright, "A Very Compact Rijndael S-box" (2005) · Kleppmann, "Implementing Curve25519/X25519" (2020) · Koç et al., "Finite Field Arithmetic for Cryptography," IEEE (2010)
+
+**Presentation 02:** FIPS 186-5 (DSS) · NIST SP 800-186 (ECC Curves, 2023) · RFC 7748 (X25519/X448) · RFC 8032 (EdDSA) · RFC 6979 (Deterministic ECDSA) · SEC 2 (SECG Curves) · RFC 5639 (Brainpool) · Koblitz, "Elliptic Curve Cryptosystems" (1987) · Miller, "Use of Elliptic Curves in Cryptography" (CRYPTO 1985) · Montgomery, "Speeding the Pollard and EC Methods of Factorization" (1987) · Edwards, "A Normal Form for Elliptic Curves" (2007) · Bernstein, "Curve25519: New Diffie-Hellman Speed Records" (2006) · Bernstein & Lange, "Faster Addition and Doubling on Elliptic Curves" (ASIACRYPT 2007) · Renes, Costello, Batina, "Complete Addition Formulas for Prime Order Elliptic Curves" (2016) · Bernstein & Lange, "Montgomery Curves and the Montgomery Ladder" (2017) · Hankerson, Menezes, Vanstone, "Guide to Elliptic Curve Cryptography" (Springer, 2004) · Pohlig & Hellman (1978) · Pollard, "Monte Carlo Methods for Index Computation" (1978) · Smart, "The Discrete Logarithm Problem on Elliptic Curves of Trace One" (1999) · Menezes, Okamoto, Vanstone, "Reducing ECDLP to DLP over Extension Fields" (1993)
 
 **Presentation 06:** FIPS 186-5 (DSS) · FIPS 204 (ML-DSA) · FIPS 205 (SLH-DSA) · NIST SP 800-186 (ECC Curves) · RFC 6979 (Deterministic ECDSA) · RFC 8032 (EdDSA) · BIP 340 (Schnorr) · Johnson, Menezes, Vanstone, "The ECDSA" (2001) · Bernstein et al., "High-speed high-security signatures" (2011)
 

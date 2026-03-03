@@ -1,0 +1,1662 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>02 — Elliptic Curve Cryptography (ECC)</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/black.min.css" id="theme">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/monokai.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+
+<style>
+:root{--bg:#0a0a0f;--text:#e0e0e8;--dim:#6a6a7a;--accent:#64ffda;--accent2:#ff6b9d;--accent3:#ffd93d;--accent4:#6c5ce7;--panel:rgba(255,255,255,0.04);--border:rgba(100,255,218,0.15)}
+.reveal{font-family:'DM Sans',sans-serif;font-size:28px;color:var(--text)}
+.reveal .slides{text-align:left}
+.reveal h1,.reveal h2,.reveal h3{font-family:'Playfair Display',serif;font-weight:900;text-transform:none;letter-spacing:-.01em}
+.reveal h1{font-size:2.2em;background:linear-gradient(135deg,#64ffda 0%,#6c5ce7 50%,#ff6b9d 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+.reveal h2{font-size:1.6em;color:#fff;margin-bottom:.4em}
+.reveal h3{font-size:1.15em;color:var(--accent);margin-bottom:.3em}
+.reveal p,.reveal li{line-height:1.6;color:var(--text)}
+.reveal ul,.reveal ol{margin-left:1em}
+.reveal li{margin-bottom:.35em}
+.reveal code{font-family:'JetBrains Mono',monospace}
+.reveal pre{width:100%;font-size:.48em;background:#0d1117;border:1px solid var(--border);border-radius:8px;padding:14px;box-shadow:0 4px 24px rgba(0,0,0,.4)}
+.reveal pre code{font-family:'JetBrains Mono',monospace;line-height:1.5}
+.reveal .dim{color:var(--dim)}
+.reveal .accent{color:var(--accent)}
+.reveal .accent2{color:var(--accent2)}
+.reveal .accent3{color:var(--accent3)}
+.reveal .accent4{color:var(--accent4)}
+.reveal .small{font-size:.7em}
+.reveal .tiny{font-size:.55em;color:var(--dim)}
+.reveal .badge{display:inline-block;padding:3px 10px;border-radius:4px;font-size:.55em;font-weight:700;text-transform:uppercase;letter-spacing:.08em}
+.reveal .badge-math{background:rgba(108,92,231,.2);color:var(--accent4)}
+.reveal .badge-std{background:rgba(100,255,218,.15);color:var(--accent)}
+.reveal .badge-hw{background:rgba(255,107,157,.15);color:var(--accent2)}
+.reveal .badge-code{background:rgba(255,217,61,.15);color:var(--accent3)}
+.reveal .badge-attack{background:rgba(255,80,80,.15);color:#ff5050}
+.reveal .badge-interactive{background:rgba(0,200,255,.15);color:#00c8ff}
+.panel{background:var(--panel);border:1px solid var(--border);border-radius:10px;padding:20px;margin:10px 0}
+.reveal table{font-size:.65em;border-collapse:collapse;width:100%;margin:.6em 0}
+.reveal table th{background:rgba(100,255,218,.08);color:var(--accent);font-weight:700;text-align:left;padding:8px 12px;border-bottom:2px solid var(--border)}
+.reveal table td{padding:6px 12px;border-bottom:1px solid rgba(255,255,255,.04)}
+.reveal table tr:hover td{background:rgba(100,255,218,.03)}
+.formula{background:rgba(108,92,231,.08);border:1px solid rgba(108,92,231,.25);border-radius:8px;padding:12px 18px;margin:12px 0;font-family:'JetBrains Mono',monospace;font-size:.85em;text-align:center}
+.cols{display:flex;gap:24px;align-items:flex-start}
+.cols>*{flex:1}
+.reveal .slide-number{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--dim);background:rgba(0,0,0,.3);padding:6px 10px;border-radius:4px}
+.math-block{background:rgba(108,92,231,.06);border-left:3px solid var(--accent4);padding:10px 16px;margin:8px 0;border-radius:0 6px 6px 0;font-size:.9em}
+canvas{border:1px solid var(--border);border-radius:8px;background:rgba(0,0,0,.3)}
+.key-point{border-left:3px solid var(--accent);padding-left:14px;margin:10px 0}
+.warning{border-left:3px solid var(--accent2);padding-left:14px;margin:10px 0;color:var(--accent2)}
+.hw-diagram{background:rgba(255,107,157,.04);border:1px solid rgba(255,107,157,.2);border-radius:10px;padding:16px;margin:10px 0}
+.step-box{display:inline-block;background:rgba(100,255,218,.08);border:1px solid var(--border);border-radius:6px;padding:4px 10px;margin:2px;font-size:.75em}
+.arrow{color:var(--accent);margin:0 4px}
+section .fragment.visible{opacity:1}
+.comparison-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.comparison-grid .panel{margin:0}
+</style>
+</head>
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================================================ -->
+<!-- SLIDE 01: Title -->
+<!-- ============================================================ -->
+<section>
+<p class="small dim" style="margin-bottom:.2em">Modern Cryptography Series — 02</p>
+<h1>Elliptic Curve<br>Cryptography</h1>
+<p style="margin-top:.6em;color:var(--dim);max-width:700px">From the mathematics of elliptic curves over finite fields through NIST/IETF standards to hardware accelerator design and side-channel resistant implementations.</p>
+<div style="margin-top:1.4em;display:flex;gap:8px;flex-wrap:wrap">
+  <span class="badge badge-math">Mathematics</span>
+  <span class="badge badge-std">Standards</span>
+  <span class="badge badge-hw">Hardware</span>
+  <span class="badge badge-code">Code</span>
+  <span class="badge badge-attack">Attacks</span>
+  <span class="badge badge-interactive">Interactive</span>
+</div>
+<p class="tiny" style="margin-top:1.6em">Arrow keys or swipe to navigate · <code>Esc</code> for overview · <code>F</code> fullscreen</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 02: Roadmap -->
+<!-- ============================================================ -->
+<section>
+<h2>Roadmap</h2>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;font-size:.8em">
+  <div class="panel">
+    <h3 style="font-size:.95em">I. Foundations</h3>
+    <p>Elliptic curves over ℝ, the group law, geometric intuition, algebraic addition formulas</p>
+  </div>
+  <div class="panel">
+    <h3 style="font-size:.95em">II. Curves over Finite Fields</h3>
+    <p>𝔽<sub>p</sub> arithmetic, ECDLP, Hasse's theorem, scalar multiplication algorithms</p>
+  </div>
+  <div class="panel">
+    <h3 style="font-size:.95em">III. Curve Forms</h3>
+    <p>Short Weierstrass, Montgomery, twisted Edwards — coordinate systems &amp; birational maps</p>
+  </div>
+  <div class="panel">
+    <h3 style="font-size:.95em">IV. Standards &amp; Protocols</h3>
+    <p>NIST P-256/P-384/P-521, Curve25519, Curve448, ECDH, ECDSA, EdDSA</p>
+  </div>
+  <div class="panel">
+    <h3 style="font-size:.95em">V. Attacks &amp; Security</h3>
+    <p>BSGS, Pollard's ρ, Pohlig-Hellman, MOV, Smart's attack, invalid curve attacks</p>
+  </div>
+  <div class="panel">
+    <h3 style="font-size:.95em">VI. Hardware &amp; Implementation</h3>
+    <p>FPGA/ASIC accelerators, Montgomery ladder, projective coordinates, side-channel countermeasures</p>
+  </div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 03: Why ECC? -->
+<!-- ============================================================ -->
+<section>
+<h2>Why Elliptic Curve Cryptography?</h2>
+<p class="fragment">The core advantage: <strong class="accent">equivalent security with dramatically smaller keys</strong>.</p>
+<table class="fragment">
+<thead><tr><th>Security Level</th><th>RSA Key</th><th>ECC Key</th><th>Ratio</th></tr></thead>
+<tbody>
+<tr><td>80 bits</td><td>1024 bits</td><td>160 bits</td><td>6:1</td></tr>
+<tr><td>112 bits</td><td>2048 bits</td><td>224 bits</td><td>9:1</td></tr>
+<tr><td><strong>128 bits</strong></td><td><strong>3072 bits</strong></td><td><strong>256 bits</strong></td><td><strong>12:1</strong></td></tr>
+<tr><td>192 bits</td><td>7680 bits</td><td>384 bits</td><td>20:1</td></tr>
+<tr><td>256 bits</td><td>15360 bits</td><td>521 bits</td><td>30:1</td></tr>
+</tbody>
+</table>
+<div class="fragment key-point">
+<p>No subexponential algorithm is known for the ECDLP on properly chosen curves — unlike integer factorization (GNFS) or the DLP in 𝔽<sub>p</sub>* (index calculus).</p>
+</div>
+<p class="fragment small dim">ECC is deployed in TLS 1.3, SSH, Bitcoin/Ethereum, Signal Protocol, Apple iMessage, WhatsApp, code signing, passkeys/FIDO2, and virtually all modern PKI.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 04: Elliptic Curves over ℝ -->
+<!-- ============================================================ -->
+<section>
+<h2>Elliptic Curves over ℝ</h2>
+<span class="badge badge-math">Mathematics</span>
+<div class="cols" style="margin-top:.5em">
+<div>
+<p>An elliptic curve in <em>short Weierstrass form</em>:</p>
+<div class="formula">y² = x³ + ax + b</div>
+<p class="small">where 4a³ + 27b² ≠ 0 (non-singular condition — no cusps or self-intersections).</p>
+<p class="fragment small" style="margin-top:.6em">The set of points (x, y) satisfying this equation, together with a special <em>point at infinity</em> 𝒪, forms an <strong class="accent">abelian group</strong> under a geometric addition law.</p>
+<div class="fragment" style="margin-top:.6em">
+<h3 style="font-size:.9em">Discriminant</h3>
+<div class="formula">Δ = −16(4a³ + 27b²)</div>
+<p class="small">Δ &gt; 0 → two connected components<br>Δ &lt; 0 → one connected component</p>
+</div>
+</div>
+<div>
+<canvas id="cvReal" width="360" height="340"></canvas>
+<p class="tiny" style="text-align:center">y² = x³ − x + 1 over ℝ</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 05: The Group Law — Geometric -->
+<!-- ============================================================ -->
+<section>
+<h2>The Group Law — Geometric</h2>
+<span class="badge badge-math">Mathematics</span>
+<div class="cols" style="margin-top:.4em">
+<div>
+<h3>Point Addition (P ≠ Q)</h3>
+<ol class="small">
+  <li class="fragment">Draw a line through P and Q</li>
+  <li class="fragment">The line intersects the curve at a third point R′</li>
+  <li class="fragment">Reflect R′ over the x-axis to get R = P + Q</li>
+</ol>
+<h3 class="fragment" style="margin-top:.6em">Point Doubling (P = Q)</h3>
+<ol class="small">
+  <li class="fragment">Draw the tangent to the curve at P</li>
+  <li class="fragment">The tangent intersects the curve at R′</li>
+  <li class="fragment">Reflect R′ to get R = 2P</li>
+</ol>
+<div class="fragment panel" style="font-size:.8em;margin-top:.6em">
+  <strong class="accent">Identity element:</strong> The point at infinity 𝒪.<br>
+  <strong class="accent">Inverse:</strong> −(x, y) = (x, −y) (reflection across x-axis).<br>
+  <strong class="accent">Closure, associativity, commutativity</strong> all hold → abelian group.
+</div>
+</div>
+<div>
+<canvas id="cvGroupLaw" width="360" height="380"></canvas>
+<p class="tiny" style="text-align:center">Click canvas to cycle: add → double → inverse</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 06: The Group Law — Algebraic -->
+<!-- ============================================================ -->
+<section>
+<h2>The Group Law — Algebraic Formulas</h2>
+<span class="badge badge-math">Mathematics</span>
+<p class="small">For the curve y² = x³ + ax + b with P = (x₁, y₁) and Q = (x₂, y₂):</p>
+<div class="cols" style="margin-top:.4em">
+<div class="panel">
+<h3 style="font-size:.9em">Addition (P ≠ Q)</h3>
+<div class="math-block">
+λ = (y₂ − y₁) / (x₂ − x₁)<br>
+x₃ = λ² − x₁ − x₂<br>
+y₃ = λ(x₁ − x₃) − y₁
+</div>
+<p class="tiny">Slope of secant line through P and Q</p>
+</div>
+<div class="panel">
+<h3 style="font-size:.9em">Doubling (P = Q)</h3>
+<div class="math-block">
+λ = (3x₁² + a) / (2y₁)<br>
+x₃ = λ² − 2x₁<br>
+y₃ = λ(x₁ − x₃) − y₁
+</div>
+<p class="tiny">Slope of tangent at P (implicit differentiation)</p>
+</div>
+</div>
+<div class="fragment panel" style="font-size:.8em">
+<h3 style="font-size:.9em">Special Cases</h3>
+<ul>
+<li>P + 𝒪 = P  (identity)</li>
+<li>P + (−P) = 𝒪 where −P = (x₁, −y₁)  (inverse)</li>
+<li>If y₁ = 0 when doubling → 2P = 𝒪 (point of order 2)</li>
+</ul>
+</div>
+<p class="fragment tiny">Cost: addition ≈ 1I + 2M + 1S in affine coordinates (I = field inversion, M = multiplication, S = squaring)</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 07: Curves over Finite Fields -->
+<!-- ============================================================ -->
+<section>
+<h2>Elliptic Curves over Finite Fields</h2>
+<span class="badge badge-math">Mathematics</span>
+<p class="small">Replace ℝ with the prime field 𝔽<sub>p</sub> = {0, 1, …, p−1}. All arithmetic is mod p.</p>
+<div class="formula">y² ≡ x³ + ax + b &nbsp;(mod p)</div>
+<div class="cols" style="margin-top:.4em">
+<div>
+<p class="small fragment">The set E(𝔽<sub>p</sub>) consists of all pairs (x, y) ∈ 𝔽<sub>p</sub> × 𝔽<sub>p</sub> satisfying the curve equation, plus 𝒪.</p>
+<div class="fragment key-point small">
+  <strong>Hasse's Theorem:</strong> The number of points on E(𝔽<sub>p</sub>) satisfies<br>
+  <span style="font-family:'JetBrains Mono';margin-left:1em">|#E(𝔽<sub>p</sub>) − (p + 1)| ≤ 2√p</span>
+</div>
+<p class="fragment small">The <strong class="accent3">same algebraic formulas</strong> apply — just replace division with modular inverse (via extended Euclidean algorithm or Fermat's little theorem: a<sup>−1</sup> ≡ a<sup>p−2</sup> mod p).</p>
+<div class="fragment small" style="margin-top:.6em">
+<strong class="accent2">Key insight:</strong> Over 𝔽<sub>p</sub>, the points form a <em>finite</em> abelian group. The geometric "line-intersect-reflect" still applies algebraically even though the visual geometry is lost.
+</div>
+</div>
+<div>
+<canvas id="cvFiniteField" width="360" height="340"></canvas>
+<p class="tiny" style="text-align:center">y² ≡ x³ + 2x + 3 (mod 97) — 100 points shown</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 08: The ECDLP -->
+<!-- ============================================================ -->
+<section>
+<h2>The Elliptic Curve Discrete Logarithm Problem</h2>
+<span class="badge badge-math">Mathematics</span>
+<div class="panel" style="margin-top:.4em">
+<p><strong class="accent">Definition (ECDLP):</strong> Given an elliptic curve E over 𝔽<sub>p</sub>, a generator point G of order n, and a point Q = kG, find the scalar k.</p>
+</div>
+<div class="cols" style="margin-top:.6em">
+<div>
+<h3>The Trapdoor</h3>
+<ul class="small">
+  <li class="fragment"><strong class="accent">Easy (forward):</strong> Given k and G, compute Q = kG in O(log k) group operations using double-and-add</li>
+  <li class="fragment"><strong class="accent2">Hard (reverse):</strong> Given Q and G, find k — best known generic algorithm is O(√n) with Pollard's ρ</li>
+</ul>
+</div>
+<div class="fragment">
+<h3>Security Levels</h3>
+<table>
+<thead><tr><th>Curve Size</th><th>ECDLP Work</th><th>≈ Security</th></tr></thead>
+<tbody>
+<tr><td>160 bits</td><td>2<sup>80</sup></td><td>80-bit</td></tr>
+<tr><td>256 bits</td><td>2<sup>128</sup></td><td>128-bit</td></tr>
+<tr><td>384 bits</td><td>2<sup>192</sup></td><td>192-bit</td></tr>
+<tr><td>521 bits</td><td>2<sup>260</sup></td><td>256-bit</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<p class="fragment small dim">No subexponential classical algorithm exists for properly chosen curves. Compare: RSA-3072 has security ~2<sup>128</sup> but uses the GNFS which is subexponential — this is why ECC keys are so much shorter.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 09: Scalar Multiplication -->
+<!-- ============================================================ -->
+<section>
+<h2>Scalar Multiplication Algorithms</h2>
+<span class="badge badge-math">Mathematics</span> <span class="badge badge-hw">Hardware</span>
+<p class="small">Computing Q = kG efficiently is the critical operation in every ECC protocol.</p>
+<div class="cols" style="margin-top:.4em">
+<div>
+<h3>Double-and-Add (Binary Method)</h3>
+<pre><code class="language-python">def scalar_mult(k, P):
+    """Left-to-right binary method"""
+    R = INFINITY
+    for bit in bin(k)[2:]:  # MSB to LSB
+        R = point_double(R)
+        if bit == '1':
+            R = point_add(R, P)
+    return R</code></pre>
+<p class="tiny">Cost: ≈ log₂(k) doublings + (HW(k)−1) additions, where HW = Hamming weight</p>
+</div>
+<div class="fragment">
+<h3>NAF (Non-Adjacent Form)</h3>
+<p class="small">Recode k using digits {−1, 0, 1} with no two consecutive non-zero digits. Average density: 1/3 vs 1/2 for binary.</p>
+<div class="math-block small">
+  Example: k = 7<br>
+  Binary: 111 → 3 adds<br>
+  NAF: 100̄1 (= 8 − 1) → 1 add + 1 sub
+</div>
+<h3 class="fragment" style="margin-top:.4em">Windowed Methods</h3>
+<p class="small fragment">w-NAF: precompute {G, 3G, 5G, …, (2<sup>w</sup>−1)G}, then scan k in windows of w bits. Reduces additions to ≈ n/(w+1).</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 10: Montgomery Ladder -->
+<!-- ============================================================ -->
+<section>
+<h2>The Montgomery Ladder</h2>
+<span class="badge badge-hw">Hardware</span> <span class="badge badge-std">Constant-Time</span>
+<p class="small">Peter Montgomery (1987): a constant-time scalar multiplication using only x-coordinates.</p>
+<div class="cols" style="margin-top:.4em">
+<div>
+<pre><code class="language-python">def montgomery_ladder(k, P):
+    """Constant-time scalar mult"""
+    R0 = INFINITY
+    R1 = P
+    for bit in bin(k)[2:]:  # MSB first
+        if bit == '0':
+            R1 = point_add(R0, R1)
+            R0 = point_double(R0)
+        else:
+            R0 = point_add(R0, R1)
+            R1 = point_double(R1)
+    return R0</code></pre>
+</div>
+<div>
+<div class="panel" style="font-size:.8em">
+<h3 style="font-size:.9em">Key Properties</h3>
+<ul>
+  <li><strong class="accent">Constant-time:</strong> always performs 1 add + 1 double per bit — no branching on secret data</li>
+  <li class="fragment"><strong class="accent">x-only:</strong> works with projective X:Z coordinates on Montgomery curves — no y needed until recovery</li>
+  <li class="fragment"><strong class="accent">Differential:</strong> maintains R1 − R0 = P at every step</li>
+  <li class="fragment"><strong class="accent">Side-channel resistant:</strong> uniform execution pattern defeats SPA</li>
+</ul>
+</div>
+<p class="fragment tiny">Cost on Montgomery curve: ≈ 5M + 4S + 1×(a24) per bit, where a24 = (A−2)/4. For Curve25519, a24 = 121665.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 11: Curve Forms — Weierstrass -->
+<!-- ============================================================ -->
+<section>
+<h2>Curve Forms: Short Weierstrass</h2>
+<span class="badge badge-math">Mathematics</span>
+<div class="formula">y² = x³ + ax + b &emsp; over 𝔽<sub>p</sub>, &ensp; char ≠ 2, 3</div>
+<div class="cols" style="margin-top:.5em">
+<div>
+<h3>Properties</h3>
+<ul class="small">
+  <li>Most general standard form</li>
+  <li>Used by NIST P-curves and secp256k1</li>
+  <li>Can represent any elliptic curve (up to isomorphism) when char(K) ≠ 2, 3</li>
+  <li>Prime-order groups possible (cofactor h = 1)</li>
+</ul>
+<h3 class="fragment" style="margin-top:.5em">Coordinate Systems</h3>
+<table class="small fragment">
+<thead><tr><th>Coordinates</th><th>Addition</th><th>Doubling</th></tr></thead>
+<tbody>
+<tr><td>Affine</td><td>1I+2M+1S</td><td>1I+2M+2S</td></tr>
+<tr><td>Projective</td><td>12M+2S</td><td>5M+6S</td></tr>
+<tr><td>Jacobian</td><td>11M+5S</td><td>1M+8S</td></tr>
+<tr><td>Mixed Jacobian</td><td>7M+4S</td><td>—</td></tr>
+</tbody>
+</table>
+</div>
+<div class="fragment">
+<h3>NIST P-256 Optimization: a = −3</h3>
+<p class="small">All NIST prime curves use a = −3, which saves one multiplication in the doubling formula:</p>
+<div class="math-block small">
+  λ = 3(x₁ − Z₁²)(x₁ + Z₁²)<br>
+  <span class="dim">instead of 3x₁² + a·Z₁⁴</span>
+</div>
+<p class="small fragment" style="margin-top:.4em"><strong class="accent2">Limitation:</strong> Addition formulas have <em>exceptional cases</em> — P = Q, P = −Q, P = 𝒪 — requiring conditional branches, which leak via side-channels.</p>
+<p class="small fragment">Complete addition formulas for prime-order Weierstrass curves exist (Renes, Costello, Batina 2016) but cost more: 12M + 2S + 6a + 1b.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 12: Curve Forms — Montgomery -->
+<!-- ============================================================ -->
+<section>
+<h2>Curve Forms: Montgomery</h2>
+<span class="badge badge-math">Mathematics</span>
+<div class="formula">Bv² = u³ + Au² + u &emsp; A ≠ ±2, &ensp; B ≠ 0</div>
+<div class="cols" style="margin-top:.4em">
+<div>
+<h3>Properties</h3>
+<ul class="small">
+  <li>Introduced by Peter Montgomery (1987) for ECM factorization</li>
+  <li>Group order always divisible by 4 (cofactor h ≥ 4)</li>
+  <li>x-only arithmetic: differential addition uses only X:Z projective coords</li>
+  <li>Naturally constant-time via the Montgomery ladder</li>
+</ul>
+<div class="fragment panel" style="font-size:.8em">
+<h3 style="font-size:.9em">Differential Addition (x-only)</h3>
+<div class="math-block small">
+Given x(P), x(Q), x(P−Q):<br>
+X₊ = Z₋ · (X_P·X_Q − Z_P·Z_Q)²<br>
+Z₊ = X₋ · (X_P·Z_Q − Z_P·X_Q)²
+</div>
+<p class="tiny">Cost: 4M + 2S per step. Doubling: 2M + 2S + 1×a24</p>
+</div>
+</div>
+<div class="fragment">
+<h3>Key Curves</h3>
+<table class="small">
+<thead><tr><th>Curve</th><th>A</th><th>p</th><th>Security</th></tr></thead>
+<tbody>
+<tr><td><strong class="accent">Curve25519</strong></td><td>486662</td><td>2²⁵⁵ − 19</td><td>~128 bit</td></tr>
+<tr><td><strong class="accent">Curve448</strong></td><td>39081</td><td>2⁴⁴⁸ − 2²²⁴ − 1</td><td>~224 bit</td></tr>
+</tbody>
+</table>
+<p class="small" style="margin-top:.5em"><strong class="accent3">Why these primes?</strong> Pseudo-Mersenne form enables fast modular reduction with a few additions/shifts instead of expensive division.</p>
+<p class="small fragment">Curve25519: p = 2²⁵⁵ − 19 → reduction costs ~1 multiplication by 19.<br>
+Curve448: Goldilocks prime → Karatsuba-friendly 2×224-bit limb decomposition.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 13: Curve Forms — Edwards -->
+<!-- ============================================================ -->
+<section>
+<h2>Curve Forms: (Twisted) Edwards</h2>
+<span class="badge badge-math">Mathematics</span>
+<div class="formula">ax² + y² = 1 + dx²y² &emsp; (twisted Edwards, a ≠ d)</div>
+<div class="cols" style="margin-top:.4em">
+<div>
+<h3>Addition Law</h3>
+<div class="math-block small">
+(x₁, y₁) + (x₂, y₂) =<br>
+&nbsp;( (x₁y₂ + y₁x₂) / (1 + dx₁x₂y₁y₂),<br>
+&nbsp;&nbsp; (y₁y₂ − ax₁x₂) / (1 − dx₁x₂y₁y₂) )
+</div>
+<div class="fragment key-point small" style="margin-top:.5em">
+  <strong>Complete addition law:</strong> When d is not a square in 𝔽<sub>p</sub>, the denominators are <em>never zero</em> for any inputs on the curve. No exceptional cases — the same formula handles addition, doubling, identity, and inverses.
+</div>
+<p class="fragment small"><strong class="accent">Neutral element:</strong> (0, 1)<br>
+<strong class="accent">Inverse:</strong> −(x, y) = (−x, y)</p>
+</div>
+<div class="fragment">
+<h3>Why Edwards Curves Matter</h3>
+<ul class="small">
+  <li><strong class="accent">Complete:</strong> No branches on secret data → inherently side-channel resistant</li>
+  <li><strong class="accent">Unified:</strong> Same formula for add and double → simplifies hardware</li>
+  <li><strong class="accent">Fast:</strong> Extended coordinates: 8M for add, 4M+4S for double</li>
+</ul>
+<div class="panel" style="font-size:.75em;margin-top:.5em">
+<h3 style="font-size:.9em">edwards25519</h3>
+<p>−x² + y² = 1 + d·x²y²<br>
+d = −121665/121666 mod p<br>
+Birationally equivalent to Curve25519<br>
+Used by Ed25519 (EdDSA signatures)</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 14: Birational Equivalences -->
+<!-- ============================================================ -->
+<section>
+<h2>Birational Equivalences</h2>
+<span class="badge badge-math">Mathematics</span>
+<p class="small">The three curve forms are related by rational maps that preserve the group structure.</p>
+<div style="text-align:center;margin:1em 0">
+  <span class="step-box"><strong>Montgomery</strong><br>Bv² = u³ + Au² + u</span>
+  <span class="arrow">⟷</span>
+  <span class="step-box"><strong>Twisted Edwards</strong><br>ax² + y² = 1 + dx²y²</span>
+  <span class="arrow">⟷</span>
+  <span class="step-box"><strong>Weierstrass</strong><br>Y² = X³ + aX + b</span>
+</div>
+<div class="cols" style="margin-top:.4em">
+<div class="panel" style="font-size:.75em">
+<h3 style="font-size:.9em">Montgomery ↔ Twisted Edwards</h3>
+<div class="math-block small">
+(u, v) → (x, y) = (u/v, (u−1)/(u+1))<br>
+a = (A+2)/B, &ensp; d = (A−2)/B
+</div>
+<p class="tiny">Exceptions: points where v = 0 or u = −1</p>
+</div>
+<div class="panel" style="font-size:.75em">
+<h3 style="font-size:.9em">Montgomery → Weierstrass</h3>
+<div class="math-block small">
+(u, v) → (X, Y) = (u/B + A/(3B), v/B)<br>
+a<sub>W</sub> = (3 − A²)/(3B²)<br>
+b<sub>W</sub> = (2A³ − 9A)/(27B³)
+</div>
+</div>
+</div>
+<div class="fragment panel" style="font-size:.78em;margin-top:.4em">
+<h3 style="font-size:.9em">Practical Implications</h3>
+<p><strong class="accent">X25519 (ECDH):</strong> Uses Montgomery x-only ladder on Curve25519<br>
+<strong class="accent">Ed25519 (EdDSA):</strong> Uses twisted Edwards addition on edwards25519<br>
+<strong class="accent">Same underlying curve</strong> — keys can be converted between the two forms</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 15: Projective Coordinates Deep Dive -->
+<!-- ============================================================ -->
+<section>
+<h2>Coordinate Systems in Practice</h2>
+<span class="badge badge-hw">Hardware</span>
+<p class="small">Avoiding field inversions is crucial — 1 inversion ≈ 80–100 multiplications.</p>
+<table style="font-size:.62em">
+<thead><tr><th>System</th><th>Representation</th><th>Add Cost</th><th>Double Cost</th><th>Notes</th></tr></thead>
+<tbody>
+<tr><td><strong>Affine</strong></td><td>(x, y)</td><td>1I+2M+1S</td><td>1I+2M+2S</td><td>Inversion per operation</td></tr>
+<tr><td><strong>Projective</strong></td><td>(X:Y:Z), x=X/Z, y=Y/Z</td><td>12M+2S</td><td>5M+6S</td><td>Weierstrass</td></tr>
+<tr><td><strong>Jacobian</strong></td><td>(X:Y:Z), x=X/Z², y=Y/Z³</td><td>11M+5S</td><td>1M+8S</td><td>Fast doubling; NIST P-curves</td></tr>
+<tr><td><strong>Extended</strong></td><td>(X:Y:Z:T), xy=T/Z</td><td>8M</td><td>4M+4S</td><td>Twisted Edwards; Ed25519</td></tr>
+<tr><td><strong>Montgomery x-only</strong></td><td>(X:Z), x=X/Z</td><td>4M+2S*</td><td>2M+2S+1D</td><td>Differential; X25519</td></tr>
+<tr><td><strong>Co-Z</strong></td><td>Shared Z coordinate</td><td>5M+2S</td><td>—</td><td>NIST P-256 ladder</td></tr>
+</tbody>
+</table>
+<p class="tiny">*Montgomery addition requires the difference point. D = multiplication by curve constant a24.</p>
+<div class="fragment panel" style="font-size:.78em">
+<strong class="accent">Strategy:</strong> Perform all intermediate operations in projective/Jacobian/extended coordinates, paying <em>zero inversions</em>, then convert back to affine at the very end with a single inversion.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 16: Standard Curves Overview -->
+<!-- ============================================================ -->
+<section>
+<h2>Standard Elliptic Curves</h2>
+<span class="badge badge-std">Standards</span>
+<table style="font-size:.56em">
+<thead><tr><th>Curve</th><th>Form</th><th>Field</th><th>Order Bits</th><th>Cofactor</th><th>Security</th><th>Standards</th></tr></thead>
+<tbody>
+<tr><td><strong class="accent">P-256</strong></td><td>Weierstrass</td><td>𝔽<sub>p</sub>, p = 2²⁵⁶ − 2²²⁴ + 2¹⁹² + 2⁹⁶ − 1</td><td>256</td><td>1</td><td>128</td><td>FIPS 186-5, SP 800-186, Suite B</td></tr>
+<tr><td><strong>P-384</strong></td><td>Weierstrass</td><td>𝔽<sub>p</sub>, 384-bit NIST prime</td><td>384</td><td>1</td><td>192</td><td>FIPS 186-5, CNSA 1.0</td></tr>
+<tr><td><strong>P-521</strong></td><td>Weierstrass</td><td>𝔽<sub>p</sub>, p = 2⁵²¹ − 1</td><td>521</td><td>1</td><td>256</td><td>FIPS 186-5</td></tr>
+<tr><td><strong class="accent">Curve25519</strong></td><td>Montgomery</td><td>𝔽<sub>p</sub>, p = 2²⁵⁵ − 19</td><td>253</td><td>8</td><td>~128</td><td>RFC 7748, SP 800-186</td></tr>
+<tr><td><strong>Curve448</strong></td><td>Montgomery</td><td>𝔽<sub>p</sub>, p = 2⁴⁴⁸ − 2²²⁴ − 1</td><td>446</td><td>4</td><td>~224</td><td>RFC 7748, SP 800-186</td></tr>
+<tr><td><strong class="accent">edwards25519</strong></td><td>Twisted Edwards</td><td>(same as Curve25519)</td><td>253</td><td>8</td><td>~128</td><td>RFC 8032 (Ed25519)</td></tr>
+<tr><td><strong>edwards448</strong></td><td>Edwards</td><td>(same as Curve448)</td><td>446</td><td>4</td><td>~224</td><td>RFC 8032 (Ed448)</td></tr>
+<tr><td><strong>secp256k1</strong></td><td>Weierstrass</td><td>𝔽<sub>p</sub>, p = 2²⁵⁶ − 2³² − 977</td><td>256</td><td>1</td><td>128</td><td>SEC 2 (Bitcoin)</td></tr>
+<tr><td><strong>BrainpoolP256r1</strong></td><td>Weierstrass</td><td>256-bit random prime</td><td>256</td><td>1</td><td>128</td><td>RFC 5639</td></tr>
+</tbody>
+</table>
+<div class="fragment panel" style="font-size:.75em">
+<strong class="accent">NIST SP 800-186 (2023):</strong> Adds Curve25519/Curve448 and their Edwards forms. Deprecates all binary field curves. Recommends prime-field curves only for new implementations.
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 17: Curve25519 Deep Dive -->
+<!-- ============================================================ -->
+<section>
+<h2>Deep Dive: Curve25519 / X25519 / Ed25519</h2>
+<span class="badge badge-std">Standards</span>
+<div class="cols" style="margin-top:.3em">
+<div>
+<h3>Design Principles (Bernstein, 2006)</h3>
+<ul class="small">
+  <li><strong class="accent">Prime shape:</strong> p = 2²⁵⁵ − 19 enables fast reduction (multiply high limbs by 19 and add to low limbs)</li>
+  <li class="fragment"><strong class="accent">Laddering:</strong> Montgomery form → constant-time x-only ladder</li>
+  <li class="fragment"><strong class="accent">Cofactor 8:</strong> Clamping clears low 3 bits of scalar (multiple of 8) and sets bit 254 — prevents small-subgroup attacks and ensures constant-time</li>
+  <li class="fragment"><strong class="accent">Twist security:</strong> Both curve and quadratic twist have large prime-order subgroups — protects against invalid-curve faults</li>
+  <li class="fragment"><strong class="accent">A = 486662:</strong> Smallest A satisfying all security criteria</li>
+</ul>
+</div>
+<div class="fragment">
+<h3>Performance</h3>
+<table class="small">
+<thead><tr><th>Operation</th><th>Time (Haswell)</th></tr></thead>
+<tbody>
+<tr><td>X25519 ECDH</td><td>~145,000 cycles</td></tr>
+<tr><td>Ed25519 sign</td><td>~87,000 cycles</td></tr>
+<tr><td>Ed25519 verify</td><td>~207,000 cycles</td></tr>
+<tr><td>P-256 ECDH</td><td>~260,000 cycles</td></tr>
+</tbody>
+</table>
+<div class="panel" style="font-size:.75em;margin-top:.4em">
+<h3 style="font-size:.85em">Deployment</h3>
+<p>TLS 1.3 (default key exchange), Signal Protocol, WhatsApp, SSH (Ed25519 keys), WireGuard, age encryption, FIDO2/Passkeys, Tor</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 18: ECDH Protocol -->
+<!-- ============================================================ -->
+<section>
+<h2>ECDH: Elliptic Curve Diffie-Hellman</h2>
+<span class="badge badge-std">Protocol</span>
+<div style="text-align:center;margin:.8em 0">
+<div style="display:inline-block;text-align:left">
+<table style="font-size:.72em">
+<thead><tr><th style="width:200px;color:var(--accent)">Alice</th><th style="width:100px;text-align:center">Channel</th><th style="width:200px;color:var(--accent2)">Bob</th></tr></thead>
+<tbody>
+<tr><td>Choose private key a ∈ [1, n−1]</td><td></td><td>Choose private key b ∈ [1, n−1]</td></tr>
+<tr><td>Compute A = aG</td><td style="text-align:center">A →</td><td></td></tr>
+<tr><td></td><td style="text-align:center">← B</td><td>Compute B = bG</td></tr>
+<tr><td>Compute S = aB = abG</td><td></td><td>Compute S = bA = baG</td></tr>
+<tr><td colspan="3" style="text-align:center;color:var(--accent3);padding-top:8px"><strong>Shared secret: S = abG</strong></td></tr>
+</tbody>
+</table>
+</div>
+</div>
+<div class="cols fragment" style="margin-top:.4em">
+<div class="panel" style="font-size:.78em">
+<h3 style="font-size:.9em">X25519 (RFC 7748)</h3>
+<ol class="small">
+  <li>Clamp 32-byte private key (clear bits 0–2, set bit 254, clear bit 255)</li>
+  <li>Montgomery ladder on u-coordinate only</li>
+  <li>Output: 32-byte shared secret</li>
+  <li>Derive symmetric key via HKDF</li>
+</ol>
+</div>
+<div class="panel" style="font-size:.78em">
+<h3 style="font-size:.9em">ECDH on NIST P-256</h3>
+<ol class="small">
+  <li>Validate peer's public key is on curve</li>
+  <li>Scalar multiply with private key</li>
+  <li>Output: x-coordinate of shared point</li>
+  <li>Feed into KDF (SP 800-56C)</li>
+</ol>
+<p class="tiny warning">Must validate public key — otherwise invalid curve attacks!</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 19: ECDSA -->
+<!-- ============================================================ -->
+<section>
+<h2>ECDSA: Elliptic Curve Digital Signature Algorithm</h2>
+<span class="badge badge-std">Protocol</span>
+<div class="cols" style="margin-top:.3em">
+<div>
+<h3>Key Generation</h3>
+<p class="small">Private key: d ∈ [1, n−1] random<br>
+Public key: Q = dG</p>
+
+<h3 style="margin-top:.4em">Signing (message m)</h3>
+<ol class="small">
+  <li>e = HASH(m), truncate to bitlength of n</li>
+  <li>Choose random k ∈ [1, n−1]</li>
+  <li>Compute (x₁, y₁) = kG</li>
+  <li>r = x₁ mod n &ensp;(if r = 0, restart)</li>
+  <li>s = k⁻¹(e + rd) mod n &ensp;(if s = 0, restart)</li>
+  <li>Signature = (r, s)</li>
+</ol>
+</div>
+<div>
+<h3>Verification</h3>
+<ol class="small">
+  <li>Check r, s ∈ [1, n−1]</li>
+  <li>e = HASH(m)</li>
+  <li>w = s⁻¹ mod n</li>
+  <li>u₁ = ew mod n, &ensp; u₂ = rw mod n</li>
+  <li>Compute (x₁, y₁) = u₁G + u₂Q</li>
+  <li>Accept if x₁ mod n = r</li>
+</ol>
+<div class="fragment warning small" style="margin-top:.5em">
+<strong>Critical:</strong> The nonce k must be truly random and unique per signature. Reusing k leaks the private key directly:<br>
+<span class="dim" style="font-family:'JetBrains Mono'">d = (s·k − e) · r⁻¹ mod n</span>
+</div>
+<p class="fragment tiny"><strong>RFC 6979:</strong> Deterministic ECDSA — derives k = HMAC-DRBG(d, HASH(m)), eliminating random nonce failures.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 20: EdDSA -->
+<!-- ============================================================ -->
+<section>
+<h2>EdDSA: Edwards-Curve Digital Signature Algorithm</h2>
+<span class="badge badge-std">Protocol</span>
+<p class="small">RFC 8032 — deterministic Schnorr-type signatures on twisted Edwards curves.</p>
+<div class="cols" style="margin-top:.3em">
+<div>
+<h3>Ed25519 Signing</h3>
+<ol class="small">
+  <li>Private seed: 32 random bytes → SHA-512 → (a, prefix)<br>
+      <span class="dim">a = scalar (clamped), prefix = 32 bytes</span></li>
+  <li class="fragment">r = SHA-512(prefix ‖ m) mod ℓ<br>
+      <span class="dim">Deterministic nonce — no RNG needed!</span></li>
+  <li class="fragment">R = rB (B = base point on edwards25519)</li>
+  <li class="fragment">S = (r + SHA-512(R ‖ A ‖ m) · a) mod ℓ</li>
+  <li class="fragment">Signature: (R, S) = 64 bytes</li>
+</ol>
+<h3 class="fragment" style="margin-top:.4em">Verification</h3>
+<p class="small fragment">Check: 8·S·B = 8·R + 8·SHA-512(R‖A‖m)·A<br>
+<span class="dim">(cofactor 8 multiplication clears small-order components)</span></p>
+</div>
+<div class="fragment">
+<h3>EdDSA vs ECDSA</h3>
+<table class="small">
+<thead><tr><th>Property</th><th>ECDSA</th><th>EdDSA</th></tr></thead>
+<tbody>
+<tr><td>Nonce</td><td>Random (or RFC 6979)</td><td><strong class="accent">Deterministic</strong></td></tr>
+<tr><td>Curve form</td><td>Weierstrass</td><td>Twisted Edwards</td></tr>
+<tr><td>Addition law</td><td>Incomplete</td><td><strong class="accent">Complete</strong></td></tr>
+<tr><td>Signature size</td><td>~72 bytes (DER)</td><td><strong class="accent">64 bytes</strong> (fixed)</td></tr>
+<tr><td>Batch verify</td><td>Limited</td><td><strong class="accent">Native support</strong></td></tr>
+<tr><td>Malleability</td><td>s ↔ n−s</td><td><strong class="accent">Canonical S</strong></td></tr>
+<tr><td>Standards</td><td>FIPS 186-5</td><td>RFC 8032</td></tr>
+</tbody>
+</table>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 21: Attacks on ECC -->
+<!-- ============================================================ -->
+<section>
+<h2>Attacks on the ECDLP</h2>
+<span class="badge badge-attack">Attacks</span>
+<table style="font-size:.6em">
+<thead><tr><th>Attack</th><th>Complexity</th><th>Requirements</th><th>Countermeasure</th></tr></thead>
+<tbody>
+<tr><td><strong>Baby-Step Giant-Step</strong></td><td>O(√n) time, O(√n) space</td><td>Generic group</td><td>n ≥ 2²⁵⁶</td></tr>
+<tr><td><strong>Pollard's ρ</strong></td><td>O(√(πn/2)) time, O(1) space</td><td>Generic group</td><td>n ≥ 2²⁵⁶</td></tr>
+<tr><td><strong>Pohlig-Hellman</strong></td><td>O(√p<sub>max</sub>)</td><td>n has small prime factors</td><td>Use (near-)prime order n</td></tr>
+<tr><td><strong>MOV / Frey-Rück</strong></td><td>Subexponential (via pairings)</td><td>Low embedding degree</td><td>Embedding degree k ≥ 20</td></tr>
+<tr><td><strong>Smart's Attack</strong></td><td>O(n) — linear!</td><td>Anomalous curve: #E = p</td><td>Ensure #E ≠ p</td></tr>
+<tr><td><strong>Invalid Curve</strong></td><td>Varies</td><td>No point validation</td><td>Validate public keys</td></tr>
+<tr><td><strong>Small Subgroup</strong></td><td>O(√h)</td><td>Large cofactor + no cofactor mult</td><td>Cofactor validation / clamping</td></tr>
+<tr><td><strong>Shor's (Quantum)</strong></td><td>Polynomial</td><td>CRQC (~2330 qubits for 256-bit)</td><td>Post-quantum migration</td></tr>
+</tbody>
+</table>
+<div class="fragment panel" style="font-size:.78em">
+<h3 style="font-size:.9em">SafeCurves Criteria</h3>
+<p>Daniel Bernstein &amp; Tanja Lange's <a href="https://safecurves.cr.yp.to" style="color:var(--accent)" target="_blank">SafeCurves</a> project evaluates curves against: ECDLP security, twist security, completeness, indistinguishability, and implementation safety. Curve25519 and Curve448 pass all criteria. Several NIST curves do not pass all (e.g., twist security, rigidity).</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 22: Real-World Failures -->
+<!-- ============================================================ -->
+<section>
+<h2>Real-World ECC Failures</h2>
+<span class="badge badge-attack">Case Studies</span>
+<div style="font-size:.8em">
+<div class="panel" style="border-left:3px solid #ff5050;margin-bottom:12px">
+<h3 style="font-size:.9em;color:#ff5050">Sony PS3 ECDSA Nonce Reuse (2010)</h3>
+<p class="small">Sony used a <em>static</em> value of k for all ECDSA signatures on PS3 firmware. fail0verflow recovered the private key with basic algebra: d = (s·k − e)·r⁻¹ mod n. Complete compromise of PS3 code signing.</p>
+</div>
+<div class="panel fragment" style="border-left:3px solid #ff5050;margin-bottom:12px">
+<h3 style="font-size:.9em;color:#ff5050">Android Bitcoin Wallet RNG Failure (2013)</h3>
+<p class="small">Android's SecureRandom produced duplicate ECDSA nonces across different transactions. Attackers extracted private keys from the blockchain, stealing ~55 BTC.</p>
+</div>
+<div class="panel fragment" style="border-left:3px solid #ff5050;margin-bottom:12px">
+<h3 style="font-size:.9em;color:#ff5050">Minerva Timing Attack (2019)</h3>
+<p class="small">Timing leakage in scalar multiplication on smart cards allowed recovery of ECDSA private keys via lattice-based analysis of biased nonces. Affected Athena IDProtect and other JavaCard implementations.</p>
+</div>
+<div class="panel fragment" style="border-left:3px solid #ff5050">
+<h3 style="font-size:.9em;color:#ff5050">Dual_EC_DRBG NSA Backdoor (2013)</h3>
+<p class="small">The NIST-standardized PRNG used two EC points P and Q. If Q = eP for a secret e known to NSA, the output could predict future random numbers, compromising any ECC keys generated with it.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 23: ECC Hardware Accelerator Architecture -->
+<!-- ============================================================ -->
+<section>
+<h2>ECC Hardware Accelerator Architecture</h2>
+<span class="badge badge-hw">Hardware</span>
+<p class="small">Three-level hierarchy for scalar multiplication Q = kP:</p>
+<div style="text-align:center;margin:.6em 0">
+<div class="hw-diagram" style="display:inline-block;text-align:left;font-size:.75em;max-width:800px">
+<div style="text-align:center;margin-bottom:12px">
+  <span class="step-box" style="background:rgba(108,92,231,.15)"><strong>Level 3: Scalar Multiplication</strong><br>Montgomery Ladder / Double-and-Add / w-NAF</span>
+</div>
+<div style="text-align:center;margin-bottom:12px">
+  <span class="step-box" style="background:rgba(255,107,157,.12)"><strong>Level 2: Point Operations</strong><br>Point Addition · Point Doubling · Mixed Addition</span>
+</div>
+<div style="text-align:center;margin-bottom:12px">
+  <span class="step-box" style="background:rgba(100,255,218,.1)"><strong>Level 1: Modular Arithmetic</strong><br>Mod Multiply · Mod Square · Mod Add/Sub · Mod Inverse</span>
+</div>
+<div style="text-align:center">
+  <span class="step-box" style="background:rgba(255,217,61,.1)"><strong>Level 0: Multi-Precision Arithmetic</strong><br>Big-integer multiply (Karatsuba / Schoolbook) · Reduction (Barrett / Montgomery)</span>
+</div>
+</div>
+</div>
+<div class="cols fragment" style="font-size:.75em">
+<div class="panel">
+<h3 style="font-size:.85em">Performance Bottleneck</h3>
+<p>Modular multiplication dominates: ~90% of total computation. One 256-bit scalar multiplication requires ~3000-4000 modular multiplications.</p>
+</div>
+<div class="panel">
+<h3 style="font-size:.85em">Parallelism Opportunity</h3>
+<p>Point add needs 11-16 sequential field multiplications. Pipelining &amp; parallel multiplier banks (2× or 4×) can cut latency significantly.</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 24: Montgomery Modular Multiplication -->
+<!-- ============================================================ -->
+<section>
+<h2>Montgomery Modular Multiplication</h2>
+<span class="badge badge-hw">Hardware</span>
+<p class="small">The workhorse of ECC hardware — avoids expensive trial division.</p>
+<div class="cols" style="margin-top:.3em">
+<div>
+<h3>Algorithm</h3>
+<p class="small">Work in "Montgomery domain": ā = a·R mod p, where R = 2<sup>n</sup>.</p>
+<div class="math-block small">
+MonPro(ā, b̄) = ā·b̄·R⁻¹ mod p<br><br>
+1. t = ā · b̄<br>
+2. u = (t · (−p⁻¹ mod R)) mod R<br>
+3. result = (t + u·p) / R<br>
+4. if result ≥ p: result −= p
+</div>
+<p class="tiny">The division by R is a simple right-shift since R = 2<sup>n</sup></p>
+</div>
+<div class="fragment">
+<h3>Hardware Variants</h3>
+<table class="small">
+<thead><tr><th>Architecture</th><th>Latency</th><th>Area</th></tr></thead>
+<tbody>
+<tr><td>Bit-serial</td><td>O(n²)</td><td>O(n)</td></tr>
+<tr><td>Word-serial (w bits)</td><td>O(n²/w)</td><td>O(n·w)</td></tr>
+<tr><td>Systolic array</td><td>O(n)</td><td>O(n²)</td></tr>
+<tr><td>Full parallel</td><td>O(1)*</td><td>O(n²)</td></tr>
+</tbody>
+</table>
+<p class="tiny">*Pipelined — one result per clock after filling</p>
+<p class="small fragment">For Curve25519: the prime p = 2²⁵⁵ − 19 allows <strong class="accent">multiplier-less reduction</strong> — multiply overflow by 19 (shift + add).</p>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 25: FPGA Implementation Results -->
+<!-- ============================================================ -->
+<section>
+<h2>Implementation Results: FPGA &amp; ASIC</h2>
+<span class="badge badge-hw">Hardware</span>
+<table style="font-size:.55em">
+<thead><tr><th>Design</th><th>Curve</th><th>Platform</th><th>Area</th><th>Freq</th><th>Latency</th><th>Throughput</th></tr></thead>
+<tbody>
+<tr><td>Hossain 2016</td><td>P-256</td><td>Virtex-5</td><td>5,710 slices</td><td>256 MHz</td><td>5.26 ms</td><td>48.7 kbps</td></tr>
+<tr><td>Marzouqi 2019</td><td>P-256</td><td>Virtex-7</td><td>3,200 LUTs</td><td>285 MHz</td><td>1.39 ms</td><td>184 kbps</td></tr>
+<tr><td>Amiet 2021</td><td>P-256</td><td>Virtex-7</td><td>23.7k LUTs</td><td>225 MHz</td><td>0.56 ms</td><td>457 kbps</td></tr>
+<tr><td>Scientific Reports 2025</td><td>Ed25519</td><td>Virtex-5</td><td>—</td><td>117.8 MHz</td><td>1.4 ms</td><td>183 kbps</td></tr>
+<tr><td colspan="7" style="border-top:2px solid var(--border)"></td></tr>
+<tr><td><strong>Unified Curve25519+Curve448</strong></td><td>Both</td><td><strong>28nm ASIC</strong></td><td><strong>1096 kGE</strong></td><td><strong>100 MHz</strong></td><td><strong>0.43 ms (Curve25519)</strong></td><td>—</td></tr>
+<tr><td>Low-power ASIC</td><td>Curve25519</td><td>65nm</td><td>49 kGE</td><td>65 MHz</td><td>3.9 ms</td><td>—</td></tr>
+<tr><td>ANSSI IPECC</td><td>Any GF(p)</td><td>Zynq-7000</td><td>~8k LUTs + DSPs</td><td>100 MHz</td><td>~3 ms</td><td>Flexible</td></tr>
+</tbody>
+</table>
+<div class="fragment panel" style="font-size:.75em">
+<h3 style="font-size:.85em">Design Trade-offs</h3>
+<div class="cols">
+<div>
+<p><strong class="accent">Area-optimized:</strong> Single multiplier, sequential scheduling. Good for IoT/smartcards (~50 kGE).</p>
+</div>
+<div>
+<p><strong class="accent2">Performance-optimized:</strong> 4× parallel multiplier banks, pipelined. Good for TLS offload (~1000 kGE).</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 26: Side-Channel Countermeasures -->
+<!-- ============================================================ -->
+<section>
+<h2>Side-Channel Countermeasures for ECC</h2>
+<span class="badge badge-hw">Hardware</span> <span class="badge badge-attack">Defense</span>
+<table style="font-size:.6em">
+<thead><tr><th>Attack</th><th>Countermeasure</th><th>Cost</th></tr></thead>
+<tbody>
+<tr><td><strong>SPA</strong> (Simple Power Analysis)</td><td>Montgomery ladder / unified formulas / regular execution patterns</td><td>Minimal</td></tr>
+<tr><td><strong>DPA</strong> (Differential Power Analysis)</td><td>Scalar blinding: k′ = k + r·n (random r)</td><td>+1 big multiply</td></tr>
+<tr><td><strong>DPA</strong></td><td>Point blinding: add random point, subtract at end</td><td>+2 point adds</td></tr>
+<tr><td><strong>DPA</strong></td><td>Projective coordinate randomization: (X:Y:Z) → (λX:λY:λZ)</td><td>+3 field mults</td></tr>
+<tr><td><strong>Timing</strong></td><td>Constant-time field operations (no branches on secret data)</td><td>Design discipline</td></tr>
+<tr><td><strong>Fault injection</strong></td><td>Point-on-curve checks, redundant computation, error detection</td><td>~2× area</td></tr>
+<tr><td><strong>EM emanation</strong></td><td>Dual-rail logic (WDDL/SABL), shuffle, random delays</td><td>2-3× area</td></tr>
+<tr><td><strong>Invalid curve</strong></td><td>Validate input points: check y² = x³+ax+b, check nQ = 𝒪</td><td>1 scalar mult</td></tr>
+</tbody>
+</table>
+<div class="fragment panel" style="font-size:.78em">
+<h3 style="font-size:.9em">Edwards Curves: Inherent Advantages</h3>
+<p>Complete addition law → no exceptional cases → <strong class="accent">no conditional branches</strong> → SPA-resistant by construction. Combined with projective coordinate randomization and scalar blinding → strong multi-countermeasure profile with lower overhead than Weierstrass implementations.</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 27: SystemVerilog — Modular Multiplier -->
+<!-- ============================================================ -->
+<section>
+<h2>RTL: Montgomery Modular Multiplier</h2>
+<span class="badge badge-code">SystemVerilog</span>
+<pre><code class="language-verilog">module mont_mul #(
+    parameter N = 256   // Bit width
+)(
+    input  logic         clk, rst, start,
+    input  logic [N-1:0] a, b, p,  // a, b in Montgomery domain
+    input  logic [N-1:0] p_inv,    // -p^(-1) mod 2^N
+    output logic [N-1:0] result,
+    output logic         done
+);
+    logic [2*N:0] t, u_full;
+    logic [N:0]   res;
+    
+    typedef enum logic [1:0] {IDLE, COMPUTE, REDUCE, DONE} state_t;
+    state_t state;
+    
+    always_ff @(posedge clk or posedge rst) begin
+        if (rst) begin
+            state  <= IDLE;
+            done   <= 0;
+        end else case (state)
+            IDLE: if (start) begin
+                t     <= a * b;                    // Step 1: full product
+                state <= COMPUTE;
+                done  <= 0;
+            end
+            COMPUTE: begin
+                u_full <= (t[N-1:0] * p_inv);      // Step 2: u = t * (-p^-1) mod R
+                state  <= REDUCE;
+            end
+            REDUCE: begin
+                res   <= (t + u_full[N-1:0] * p) >> N; // Step 3: (t + u*p) / R
+                state <= DONE;
+            end
+            DONE: begin
+                result <= (res >= p) ? res - p : res[N-1:0];
+                done   <= 1;
+                state  <= IDLE;
+            end
+        endcase
+    end
+endmodule</code></pre>
+<p class="tiny">Simplified 3-cycle design. Production versions use word-serial or systolic architectures for area efficiency.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 28: RTL — Point Addition -->
+<!-- ============================================================ -->
+<section>
+<h2>RTL: Jacobian Point Addition Scheduler</h2>
+<span class="badge badge-code">SystemVerilog</span>
+<pre><code class="language-verilog">// Jacobian point addition: P3 = P1 + P2
+// P1 = (X1:Y1:Z1), P2 = (X2:Y2:1) [mixed add]
+// Cost: 7M + 4S  (a = -3 optimization)
+// 
+// Schedule (7 rounds with single multiplier):
+//   R1: U2 = X2*Z1^2         S2 = Y2*Z1^3
+//   R2: H  = U2 - X1         R  = S2 - Y1
+//   R3: H2 = H^2             H3 = H*H2
+//   R4: X1H2 = X1*H2
+//   R5: X3 = R^2 - H3 - 2*X1H2
+//   R6: Y3 = R*(X1H2 - X3) - Y1*H3
+//   R7: Z3 = Z1 * H
+
+module ecc_point_add_ctrl (
+    input  logic clk, rst, start,
+    input  logic mul_done,          // from Montgomery multiplier
+    output logic [2:0] mul_sel_a,   // register file address for operand A
+    output logic [2:0] mul_sel_b,   // register file address for operand B  
+    output logic [2:0] result_dst,  // where to store result
+    output logic mul_start,
+    output logic done
+);
+    // FSM with 11 states for 7M + 4S operations
+    // Parallelism: dual multipliers can overlap rounds
+    // ... (full FSM omitted for clarity)
+endmodule</code></pre>
+<p class="tiny">Production ECC accelerators schedule 11M+5S (Jacobian) or 8M (extended Edwards) across 2-4 parallel multiplier units, achieving 4-6 rounds of computation per point operation.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 29: Python ECDH Implementation -->
+<!-- ============================================================ -->
+<section>
+<h2>Python: ECDH on a Toy Curve</h2>
+<span class="badge badge-code">Code</span>
+<pre><code class="language-python">"""Elliptic Curve Diffie-Hellman on y^2 = x^3 + 2x + 3 mod 97"""
+p = 97; a = 2; b = 3
+
+def modinv(x, m=p):
+    return pow(x, m - 2, m)  # Fermat's little theorem
+
+def point_add(P, Q):
+    if P is None: return Q
+    if Q is None: return P
+    x1, y1 = P; x2, y2 = Q
+    if x1 == x2 and y1 != y2: return None  # P + (-P)
+    if P == Q:
+        lam = (3 * x1 * x1 + a) * modinv(2 * y1) % p
+    else:
+        lam = (y2 - y1) * modinv(x2 - x1) % p
+    x3 = (lam * lam - x1 - x2) % p
+    y3 = (lam * (x1 - x3) - y1) % p
+    return (x3, y3)
+
+def scalar_mult(k, P):
+    R = None
+    for bit in bin(k)[2:]:
+        R = point_add(R, R)
+        if bit == '1': R = point_add(R, P)
+    return R
+
+G = (3, 6)     # Generator point
+n = 5           # Order of G (toy example)
+
+# Alice & Bob
+a_priv = 3;  A_pub = scalar_mult(a_priv, G)  # (80, 87)
+b_priv = 4;  B_pub = scalar_mult(b_priv, G)  # (80, 10)
+
+shared_A = scalar_mult(a_priv, B_pub)  # Alice computes
+shared_B = scalar_mult(b_priv, A_pub)  # Bob computes
+assert shared_A == shared_B            # Same point!
+print(f"Shared secret: {shared_A}")    # (3, 91)</code></pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 30: Interactive — EC Point Addition Visualizer -->
+<!-- ============================================================ -->
+<section>
+<h2>Interactive: Point Addition on E(𝔽<sub>p</sub>)</h2>
+<span class="badge badge-interactive">Interactive</span>
+<div class="cols">
+<div>
+<canvas id="cvInteractive" width="400" height="400" style="cursor:crosshair"></canvas>
+</div>
+<div>
+<div class="panel" style="font-size:.78em">
+<p><strong>Curve:</strong> y² ≡ x³ + 2x + 3 (mod 97)</p>
+<p id="interInfo" style="margin-top:.4em">Click a point on the canvas to select P, then click again for Q. The sum P + Q will be shown.</p>
+<p id="interP" class="accent" style="font-family:'JetBrains Mono'"></p>
+<p id="interQ" class="accent2" style="font-family:'JetBrains Mono'"></p>
+<p id="interR" class="accent3" style="font-family:'JetBrains Mono';font-weight:700"></p>
+<button id="interReset" style="margin-top:8px;padding:6px 14px;background:rgba(100,255,218,.1);color:var(--accent);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'DM Sans'">Reset</button>
+<button id="interDouble" style="margin-top:8px;padding:6px 14px;background:rgba(108,92,231,.1);color:var(--accent4);border:1px solid var(--border);border-radius:4px;cursor:pointer;font-family:'DM Sans'">Double P</button>
+</div>
+<div class="panel fragment" style="font-size:.7em;margin-top:8px">
+<p><strong>All 100 points on E(𝔽₉₇):</strong></p>
+<p class="dim tiny" id="allPoints"></p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 31: Interactive — Scalar Multiplication Visualizer -->
+<!-- ============================================================ -->
+<section>
+<h2>Interactive: Scalar Multiplication kG</h2>
+<span class="badge badge-interactive">Interactive</span>
+<div class="cols">
+<div>
+<canvas id="cvScalarMult" width="400" height="400"></canvas>
+</div>
+<div>
+<div class="panel" style="font-size:.78em">
+<p><strong>Curve:</strong> y² ≡ x³ + 2x + 3 (mod 97)</p>
+<p><strong>Generator G:</strong> (3, 6)</p>
+<div style="margin-top:.6em">
+  <label>k = <input id="scalarK" type="range" min="1" max="100" value="1" style="width:200px;vertical-align:middle"></label>
+  <span id="scalarKVal" style="font-family:'JetBrains Mono';color:var(--accent)">1</span>
+</div>
+<p id="scalarResult" style="margin-top:.6em;font-family:'JetBrains Mono'" class="accent3"></p>
+<div id="scalarSteps" style="margin-top:.5em;font-size:.75em;max-height:200px;overflow-y:auto" class="dim"></div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 32: ECC in TLS 1.3 -->
+<!-- ============================================================ -->
+<section>
+<h2>ECC in TLS 1.3</h2>
+<span class="badge badge-std">Deployment</span>
+<p class="small">TLS 1.3 mandates ECC — X25519 is the most common key exchange.</p>
+<div style="font-size:.72em;margin-top:.4em">
+<div class="hw-diagram">
+<p style="text-align:center;margin-bottom:8px"><strong>TLS 1.3 Handshake (1-RTT)</strong></p>
+<table>
+<tr>
+<td style="width:45%;color:var(--accent)"><strong>Client</strong></td>
+<td style="width:10%;text-align:center"></td>
+<td style="width:45%;color:var(--accent2)"><strong>Server</strong></td>
+</tr>
+<tr>
+<td>Generate ephemeral X25519 keypair</td>
+<td style="text-align:center">→ ClientHello<br><span class="dim tiny">+ key_share(X25519 public)</span></td>
+<td></td>
+</tr>
+<tr>
+<td></td>
+<td style="text-align:center">← ServerHello<br><span class="dim tiny">+ key_share(X25519 public)</span></td>
+<td>Generate ephemeral X25519 keypair</td>
+</tr>
+<tr>
+<td colspan="3" style="text-align:center;padding:6px 0"><span class="accent3">Both compute: shared_secret = X25519(my_private, peer_public)</span></td>
+</tr>
+<tr>
+<td colspan="3" style="text-align:center"><span class="dim">→ HKDF-Expand → handshake keys → application keys</span></td>
+</tr>
+<tr>
+<td></td>
+<td style="text-align:center">← {Certificate, CertificateVerify}<br><span class="dim tiny">Ed25519 or ECDSA-P256 signature</span></td>
+<td>Sign transcript with long-term key</td>
+</tr>
+</table>
+</div>
+</div>
+<div class="fragment panel" style="font-size:.75em">
+<p><strong class="accent">Key exchange groups in TLS 1.3:</strong> x25519 (0x001D, most popular), secp256r1 (0x0017), x448 (0x001E), secp384r1 (0x0018), secp521r1 (0x0019). Post-quantum hybrids (X25519+ML-KEM-768) are being deployed.</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 33: ECC Across Applications -->
+<!-- ============================================================ -->
+<section>
+<h2>ECC Deployment Landscape</h2>
+<span class="badge badge-std">Deployment</span>
+<table style="font-size:.6em">
+<thead><tr><th>Application</th><th>Curve(s)</th><th>Protocol</th><th>Use</th></tr></thead>
+<tbody>
+<tr><td><strong>TLS 1.3</strong></td><td>X25519, P-256</td><td>ECDHE + ECDSA/EdDSA</td><td>Key exchange + server auth</td></tr>
+<tr><td><strong>SSH</strong></td><td>Ed25519, P-256</td><td>EdDSA, ECDSA</td><td>User/host authentication</td></tr>
+<tr><td><strong>Bitcoin</strong></td><td>secp256k1</td><td>ECDSA</td><td>Transaction signing</td></tr>
+<tr><td><strong>Ethereum</strong></td><td>secp256k1</td><td>ECDSA (+ BLS on beacon)</td><td>Transaction + consensus</td></tr>
+<tr><td><strong>Signal / WhatsApp</strong></td><td>Curve25519</td><td>X3DH + Double Ratchet</td><td>E2E encrypted messaging</td></tr>
+<tr><td><strong>WireGuard VPN</strong></td><td>Curve25519</td><td>Noise_IK(X25519)</td><td>Tunnel establishment</td></tr>
+<tr><td><strong>FIDO2 / Passkeys</strong></td><td>P-256, Ed25519</td><td>WebAuthn ECDSA/EdDSA</td><td>Passwordless auth</td></tr>
+<tr><td><strong>Apple iMessage</strong></td><td>P-256</td><td>ECDH + ECDSA</td><td>E2E encryption + signing</td></tr>
+<tr><td><strong>Tor</strong></td><td>Curve25519 (ntor)</td><td>X25519</td><td>Circuit establishment</td></tr>
+<tr><td><strong>Code Signing</strong></td><td>P-256, Ed25519</td><td>ECDSA, EdDSA</td><td>Software integrity</td></tr>
+<tr><td><strong>IoT / Embedded</strong></td><td>P-256, Curve25519</td><td>ECDH, ECDSA</td><td>Constrained-device TLS</td></tr>
+<tr><td><strong>Smart Cards</strong></td><td>P-256, BrainpoolP256</td><td>ECDSA, ECDH</td><td>EMV, ePassport, PIV</td></tr>
+</tbody>
+</table>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 34: ECC vs RSA Performance -->
+<!-- ============================================================ -->
+<section>
+<h2>ECC vs RSA: Performance Comparison</h2>
+<span class="badge badge-std">Analysis</span>
+<p class="small">At the 128-bit security level (P-256 / Curve25519 vs RSA-3072):</p>
+<table style="font-size:.62em;margin-top:.4em">
+<thead><tr><th>Operation</th><th>RSA-3072</th><th>ECDSA P-256</th><th>Ed25519</th><th>X25519</th></tr></thead>
+<tbody>
+<tr><td>Key generation</td><td>~50 ms</td><td><strong class="accent">~0.1 ms</strong></td><td><strong class="accent">~0.05 ms</strong></td><td><strong class="accent">~0.05 ms</strong></td></tr>
+<tr><td>Public key size</td><td>384 bytes</td><td><strong class="accent">33 bytes</strong></td><td><strong class="accent">32 bytes</strong></td><td><strong class="accent">32 bytes</strong></td></tr>
+<tr><td>Private key size</td><td>~1.5 KB</td><td><strong class="accent">32 bytes</strong></td><td><strong class="accent">32 bytes</strong></td><td><strong class="accent">32 bytes</strong></td></tr>
+<tr><td>Signature size</td><td>384 bytes</td><td><strong class="accent">64 bytes</strong></td><td><strong class="accent">64 bytes</strong></td><td>—</td></tr>
+<tr><td>Sign</td><td>~1.5 ms</td><td><strong class="accent">~0.15 ms</strong></td><td><strong class="accent">~0.08 ms</strong></td><td>—</td></tr>
+<tr><td>Verify</td><td><strong class="accent3">~0.04 ms</strong></td><td>~0.4 ms</td><td>~0.2 ms</td><td>—</td></tr>
+<tr><td>Key exchange</td><td>~1.5 ms</td><td>~0.3 ms</td><td>—</td><td><strong class="accent">~0.14 ms</strong></td></tr>
+</tbody>
+</table>
+<p class="tiny">Approximate timings on modern x86-64 (Haswell/Skylake). RSA verify is fast due to small public exponent e = 65537.</p>
+<div class="fragment key-point small">
+<p><strong>Bandwidth matters:</strong> In TLS, ECC's 32-byte keys vs RSA's 384-byte keys compound across billions of connections per day. This is why TLS 1.3 favors X25519+Ed25519.</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 35: Quantum Threat to ECC -->
+<!-- ============================================================ -->
+<section>
+<h2>The Quantum Threat to ECC</h2>
+<span class="badge badge-attack">Quantum</span>
+<div class="cols" style="margin-top:.3em">
+<div>
+<h3>Shor's Algorithm</h3>
+<p class="small">A quantum computer running Shor's algorithm can solve ECDLP in <strong class="accent2">polynomial time</strong>.</p>
+<div class="panel small" style="margin-top:.4em">
+<p><strong>Quantum resources for 256-bit ECC:</strong></p>
+<ul>
+<li>~2,330 logical qubits</li>
+<li>~126 billion Toffoli gates</li>
+<li>Far exceeds current quantum hardware</li>
+</ul>
+<p class="dim" style="margin-top:.4em">Compare: RSA-2048 needs ~4,098 qubits — ECC is actually <em>easier</em> for quantum computers than RSA at equivalent classical security.</p>
+</div>
+</div>
+<div class="fragment">
+<h3>Migration Timeline</h3>
+<table class="small">
+<thead><tr><th>Milestone</th><th>Date</th></tr></thead>
+<tbody>
+<tr><td>NIST PQC standards finalized</td><td>Aug 2024</td></tr>
+<tr><td>CNSA 2.0: PQ for firmware/software signing</td><td>2025</td></tr>
+<tr><td>CNSA 2.0: PQ for web/cloud</td><td>2025-2030</td></tr>
+<tr><td>NIST deprecate ECC-only</td><td>2030</td></tr>
+<tr><td>NIST disallow ECC-only</td><td>2035</td></tr>
+</tbody>
+</table>
+<div class="panel" style="font-size:.75em;margin-top:.4em">
+<h3 style="font-size:.85em">Hybrid Approach</h3>
+<p>X25519 + ML-KEM-768 in TLS 1.3 — combine classical and post-quantum security. Already deployed in Chrome, Firefox, Cloudflare.</p>
+</div>
+</div>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 36: Summary Comparison of Curve Forms -->
+<!-- ============================================================ -->
+<section>
+<h2>Curve Form Comparison Summary</h2>
+<table style="font-size:.58em">
+<thead><tr><th>Property</th><th>Short Weierstrass</th><th>Montgomery</th><th>Twisted Edwards</th></tr></thead>
+<tbody>
+<tr><td><strong>Equation</strong></td><td>y² = x³ + ax + b</td><td>Bv² = u³ + Au² + u</td><td>ax² + y² = 1 + dx²y²</td></tr>
+<tr><td><strong>Prime order possible?</strong></td><td class="accent">Yes</td><td>No (h ≥ 4)</td><td>No (h ≥ 4)</td></tr>
+<tr><td><strong>Complete addition law?</strong></td><td>Yes (Renes 2016, costly)</td><td>N/A (x-only)</td><td class="accent">Yes (when d non-square)</td></tr>
+<tr><td><strong>Best add cost</strong></td><td>7M + 4S (mixed Jacobian)</td><td>4M + 2S (diff.)</td><td class="accent">8M (extended)</td></tr>
+<tr><td><strong>Best double cost</strong></td><td>1M + 8S (Jacobian, a=-3)</td><td>2M + 2S + 1D</td><td class="accent">4M + 4S (extended)</td></tr>
+<tr><td><strong>Constant-time ease</strong></td><td>Requires care</td><td class="accent">Natural (ladder)</td><td class="accent">Natural (complete)</td></tr>
+<tr><td><strong>Key curves</strong></td><td>P-256, P-384, secp256k1</td><td>Curve25519, Curve448</td><td>edwards25519, edwards448</td></tr>
+<tr><td><strong>Primary use</strong></td><td>ECDSA, ECDH (NIST)</td><td>X25519/X448 (ECDH)</td><td>Ed25519/Ed448 (EdDSA)</td></tr>
+<tr><td><strong>FIPS approved?</strong></td><td class="accent">Yes</td><td class="accent">Yes (SP 800-186)</td><td class="accent">Yes (SP 800-186)</td></tr>
+</tbody>
+</table>
+<div class="fragment key-point small" style="margin-top:.5em">
+<p><strong>Modern best practice:</strong> Use <strong class="accent">X25519</strong> for key exchange (Montgomery ladder, constant-time) and <strong class="accent">Ed25519</strong> for signatures (complete Edwards addition, deterministic nonces). Fall back to <strong>P-256</strong> for FIPS compliance where Curve25519 is not yet approved in your specific protocol.</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 37: References -->
+<!-- ============================================================ -->
+<section>
+<h2>References</h2>
+<div style="font-size:.55em;column-count:2;column-gap:24px;line-height:1.6">
+<p><strong>Standards:</strong> FIPS 186-5 (DSS) · NIST SP 800-186 (ECC Curves, 2023) · RFC 7748 (X25519/X448) · RFC 8032 (EdDSA) · RFC 6979 (Deterministic ECDSA) · SEC 2 (SECG Curves) · RFC 5639 (Brainpool) · NIST IR 8547 (PQC Transition)</p>
+<p><strong>Foundations:</strong> Koblitz, "Elliptic Curve Cryptosystems" (1987) · Miller, "Use of Elliptic Curves in Cryptography" (CRYPTO 1985) · Montgomery, "Speeding the Pollard and EC Methods of Factorization" (1987) · Edwards, "A Normal Form for Elliptic Curves" (2007) · Bernstein &amp; Lange, "Faster Addition and Doubling on Elliptic Curves" (ASIACRYPT 2007)</p>
+<p><strong>Curves:</strong> Bernstein, "Curve25519: New Diffie-Hellman Speed Records" (2006) · Hamburg, "Ed448-Goldilocks" (2015) · Bernstein &amp; Lange, SafeCurves (safecurves.cr.yp.to)</p>
+<p><strong>Implementation:</strong> Renes, Costello, Batina, "Complete Addition Formulas for Prime Order Elliptic Curves" (2016) · Bernstein &amp; Lange, "Montgomery Curves and the Montgomery Ladder" (2017) · Hankerson, Menezes, Vanstone, "Guide to Elliptic Curve Cryptography" (Springer, 2004)</p>
+<p><strong>Hardware:</strong> High-Performance Curve25519 &amp; Curve448 Unified Accelerator (2025) · ANSSI IPECC VHDL IP · Low-Latency Twisted Edwards FPGA (Scientific Reports, 2025) · Area-Efficient ECSM over Prime Field (Microprocessors &amp; Microsystems, 2023)</p>
+<p><strong>Attacks:</strong> Pohlig &amp; Hellman (1978) · Pollard, "Monte Carlo Methods for Index Computation" (1978) · Smart, "The Discrete Logarithm Problem on Elliptic Curves of Trace One" (1999) · Menezes, Okamoto, Vanstone, "Reducing ECDLP to DLP over Extension Fields" (1993)</p>
+</div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 38: End -->
+<!-- ============================================================ -->
+<section>
+<p class="small dim" style="margin-bottom:.2em">Modern Cryptography Series — 02</p>
+<h1>Elliptic Curve<br>Cryptography</h1>
+<p style="margin-top:.6em;color:var(--dim)">38 slides · Mathematics · Standards · Hardware · Code · Attacks · Interactive</p>
+<div style="margin-top:1.2em" class="panel">
+<p class="small"><strong class="accent">Key Takeaways:</strong></p>
+<ul class="small">
+<li>ECC provides equivalent security to RSA with 10-30× smaller keys</li>
+<li>Edwards curves offer complete addition laws — inherently side-channel resistant</li>
+<li>X25519 + Ed25519 represent the modern state of the art</li>
+<li>Quantum computers will break ECC — hybrid PQ migration is underway</li>
+</ul>
+</div>
+<p class="tiny" style="margin-top:1em">← <a href="../index.html" style="color:var(--accent)">Back to Series</a> · Next: <strong>03 — AES Design &amp; Implementation</strong></p>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/highlight/highlight.min.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  slideNumber: 'c/t',
+  width: 960,
+  height: 700,
+  margin: 0.06,
+  transition: 'fade',
+  transitionSpeed: 'fast',
+  plugins: [RevealHighlight],
+  highlight: { highlightOnLoad: true }
+});
+
+// ── EC Arithmetic over F_p ──
+const FP = 97, AC = 2, BC = 3;
+function mod(a, m) { return ((a % m) + m) % m; }
+function modinv(a, m) {
+  let [old_r, r] = [mod(a,m), m], [old_s, s] = [1, 0];
+  while (r !== 0) { const q = Math.floor(old_r / r); [old_r, r] = [r, old_r - q * r]; [old_s, s] = [s, old_s - q * s]; }
+  return mod(old_s, m);
+}
+function ecAdd(P1, P2) {
+  if (!P1) return P2; if (!P2) return P1;
+  const [x1,y1]=P1, [x2,y2]=P2;
+  if (x1===x2 && y1!==y2) return null;
+  let lam;
+  if (x1===x2 && y1===y2) {
+    if (y1===0) return null;
+    lam = mod((3*x1*x1 + AC) * modinv(2*y1, FP), FP);
+  } else {
+    lam = mod((y2 - y1) * modinv(mod(x2-x1,FP), FP), FP);
+  }
+  const x3 = mod(lam*lam - x1 - x2, FP);
+  const y3 = mod(lam*(x1-x3) - y1, FP);
+  return [x3, y3];
+}
+function scalarMult(k, G) {
+  let R = null;
+  const bits = k.toString(2);
+  for (let i = 0; i < bits.length; i++) {
+    R = ecAdd(R, R);
+    if (bits[i] === '1') R = ecAdd(R, G);
+  }
+  return R;
+}
+
+// ── Enumerate all points on E(F_97): y^2 = x^3 + 2x + 3 ──
+const allPts = [];
+for (let x = 0; x < FP; x++) {
+  const rhs = mod(x*x*x + AC*x + BC, FP);
+  for (let y = 0; y < FP; y++) {
+    if (mod(y*y, FP) === rhs) allPts.push([x, y]);
+  }
+}
+
+// ── Canvas: Real curve y^2 = x^3 - x + 1 ──
+(function(){
+  const cv = document.getElementById('cvReal');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0,0,W,H);
+  // Map: x in [-2, 3], y in [-3, 3]
+  function tx(x) { return (x + 2) / 5 * W; }
+  function ty(y) { return H/2 - y / 6 * H; }
+  // Axes
+  ctx.strokeStyle = 'rgba(255,255,255,0.1)'; ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(tx(-2),ty(0)); ctx.lineTo(tx(3),ty(0)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(tx(0),ty(-3)); ctx.lineTo(tx(0),ty(3)); ctx.stroke();
+  // Curve
+  ctx.strokeStyle = '#64ffda'; ctx.lineWidth = 2;
+  for (let py = -300; py <= 300; py++) {
+    const y = py / 100;
+    const lhs = y * y;
+    // Solve x^3 - x + 1 = lhs => x^3 - x + (1-lhs) = 0
+    for (let px = -200; px <= 300; px++) {
+      const x = px / 100;
+      const rhs = x*x*x - x + 1;
+      if (Math.abs(rhs - lhs) < 0.03) {
+        ctx.fillStyle = '#64ffda';
+        ctx.fillRect(tx(x), ty(y), 1.5, 1.5);
+      }
+    }
+  }
+  // Labels
+  ctx.fillStyle = '#6a6a7a'; ctx.font = '11px "DM Sans"';
+  ctx.fillText('y² = x³ − x + 1', 10, 18);
+})();
+
+// ── Canvas: Group Law Illustration ──
+(function(){
+  const cv = document.getElementById('cvGroupLaw');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  let mode = 0;
+  function draw() {
+    ctx.fillStyle = 'rgba(10,10,15,1)'; ctx.fillRect(0,0,W,H);
+    function tx(x) { return (x + 2) / 5 * W; }
+    function ty(y) { return H/2 - y / 6 * H; }
+    // Curve
+    ctx.fillStyle = '#64ffda';
+    for (let py = -300; py <= 300; py++) {
+      const y = py / 100;
+      for (let px = -200; px <= 300; px++) {
+        const x = px / 100;
+        if (Math.abs(x*x*x - x + 1 - y*y) < 0.03) {
+          ctx.fillRect(tx(x), ty(y), 1.5, 1.5);
+        }
+      }
+    }
+    // Axes
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.moveTo(0,ty(0)); ctx.lineTo(W,ty(0)); ctx.stroke();
+    
+    if (mode === 0) { // Addition
+      const Px = -1, Py = 1, Qx = 0.5, Qy = Math.sqrt(0.5*0.5*0.5 - 0.5 + 1);
+      const lam = (Qy - Py) / (Qx - Px);
+      const Rx = lam*lam - Px - Qx;
+      const Ry_neg = lam*(Px - Rx) - Py;
+      // Line
+      ctx.strokeStyle = 'rgba(255,107,157,0.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(tx(-2), ty(Py + lam*(-2-Px))); ctx.lineTo(tx(3), ty(Py + lam*(3-Px))); ctx.stroke();
+      // Vertical
+      ctx.strokeStyle = 'rgba(255,217,61,0.4)'; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(tx(Rx), ty(-Ry_neg)); ctx.lineTo(tx(Rx), ty(Ry_neg)); ctx.stroke();
+      ctx.setLineDash([]);
+      // Points
+      drawPoint(ctx, tx(Px), ty(Py), '#64ffda', 'P'); 
+      drawPoint(ctx, tx(Qx), ty(Qy), '#ff6b9d', 'Q');
+      drawPoint(ctx, tx(Rx), ty(-Ry_neg), '#6a6a7a', "R'");
+      drawPoint(ctx, tx(Rx), ty(Ry_neg), '#ffd93d', 'P+Q');
+      ctx.fillStyle = '#6a6a7a'; ctx.font = '11px "DM Sans"'; ctx.fillText('Point Addition', 10, 18);
+    } else if (mode === 1) { // Doubling
+      const Px = -0.5, Py = Math.sqrt((-0.5)*(-0.5)*(-0.5) - (-0.5) + 1);
+      const lam = (3*Px*Px - 1) / (2*Py);
+      const Rx = lam*lam - 2*Px;
+      const Ry_neg = lam*(Px - Rx) - Py;
+      ctx.strokeStyle = 'rgba(108,92,231,0.5)'; ctx.lineWidth = 1.5;
+      ctx.beginPath(); ctx.moveTo(tx(-2), ty(Py + lam*(-2-Px))); ctx.lineTo(tx(3), ty(Py + lam*(3-Px))); ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,217,61,0.4)'; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(tx(Rx), ty(-Ry_neg)); ctx.lineTo(tx(Rx), ty(Ry_neg)); ctx.stroke();
+      ctx.setLineDash([]);
+      drawPoint(ctx, tx(Px), ty(Py), '#6c5ce7', 'P');
+      drawPoint(ctx, tx(Rx), ty(-Ry_neg), '#6a6a7a', "R'");
+      drawPoint(ctx, tx(Rx), ty(Ry_neg), '#ffd93d', '2P');
+      ctx.fillStyle = '#6a6a7a'; ctx.font = '11px "DM Sans"'; ctx.fillText('Point Doubling (tangent)', 10, 18);
+    } else { // Inverse
+      const Px = 0.5, Py = Math.sqrt(0.5*0.5*0.5 - 0.5 + 1);
+      ctx.strokeStyle = 'rgba(255,255,255,0.15)'; ctx.setLineDash([4,4]);
+      ctx.beginPath(); ctx.moveTo(tx(Px), ty(-Py-0.3)); ctx.lineTo(tx(Px), ty(Py+0.3)); ctx.stroke();
+      ctx.setLineDash([]);
+      drawPoint(ctx, tx(Px), ty(Py), '#64ffda', 'P');
+      drawPoint(ctx, tx(Px), ty(-Py), '#ff6b9d', '−P');
+      ctx.fillStyle = '#6a6a7a'; ctx.font = '11px "DM Sans"'; ctx.fillText('Inverse: −(x,y) = (x,−y)', 10, 18);
+    }
+  }
+  function drawPoint(ctx, x, y, color, label) {
+    ctx.fillStyle = color; ctx.beginPath(); ctx.arc(x, y, 5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle = color; ctx.font = 'bold 12px "DM Sans"'; ctx.fillText(label, x + 8, y - 8);
+  }
+  cv.addEventListener('click', () => { mode = (mode + 1) % 3; draw(); });
+  draw();
+})();
+
+// ── Canvas: Finite Field Points ──
+(function(){
+  const cv = document.getElementById('cvFiniteField');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  ctx.fillStyle = 'rgba(0,0,0,0.3)'; ctx.fillRect(0,0,W,H);
+  const margin = 25;
+  allPts.forEach(([x, y]) => {
+    const px = margin + (x / FP) * (W - 2*margin);
+    const py = H - margin - (y / FP) * (H - 2*margin);
+    ctx.fillStyle = '#64ffda';
+    ctx.globalAlpha = 0.7;
+    ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI*2); ctx.fill();
+  });
+  ctx.globalAlpha = 1;
+  ctx.fillStyle = '#6a6a7a'; ctx.font = '11px "DM Sans"';
+  ctx.fillText(`${allPts.length} points + 𝒪`, 10, 16);
+  ctx.fillText('x →', W - 30, H - 8);
+  ctx.fillText('y ↑', 4, margin - 5);
+})();
+
+// ── Interactive Point Addition ──
+(function(){
+  const cv = document.getElementById('cvInteractive');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const margin = 20;
+  let selP = null, selQ = null;
+
+  function ptToCanvas(x, y) {
+    return [margin + (x / FP) * (W - 2*margin), H - margin - (y / FP) * (H - 2*margin)];
+  }
+  function canvasToNearest(cx, cy) {
+    let best = null, bestD = Infinity;
+    allPts.forEach(([x,y]) => {
+      const [px,py] = ptToCanvas(x,y);
+      const d = (cx-px)*(cx-px) + (cy-py)*(cy-py);
+      if (d < bestD) { bestD = d; best = [x,y]; }
+    });
+    return bestD < 400 ? best : null;
+  }
+
+  function draw() {
+    ctx.fillStyle = 'rgba(10,10,15,1)'; ctx.fillRect(0,0,W,H);
+    // Grid
+    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
+    for (let i = 0; i <= FP; i += 10) {
+      const [gx] = ptToCanvas(i, 0);
+      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, H); ctx.stroke();
+      const [, gy] = ptToCanvas(0, i);
+      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(W, gy); ctx.stroke();
+    }
+    // All points
+    allPts.forEach(([x,y]) => {
+      const [px, py] = ptToCanvas(x, y);
+      ctx.fillStyle = 'rgba(100,255,218,0.25)';
+      ctx.beginPath(); ctx.arc(px, py, 3, 0, Math.PI*2); ctx.fill();
+    });
+    // Selected P
+    if (selP) {
+      const [px, py] = ptToCanvas(selP[0], selP[1]);
+      ctx.fillStyle = '#64ffda'; ctx.beginPath(); ctx.arc(px, py, 6, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#64ffda'; ctx.font = 'bold 13px "JetBrains Mono"'; ctx.fillText('P', px+10, py-6);
+    }
+    // Selected Q
+    if (selQ) {
+      const [qx, qy] = ptToCanvas(selQ[0], selQ[1]);
+      ctx.fillStyle = '#ff6b9d'; ctx.beginPath(); ctx.arc(qx, qy, 6, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = '#ff6b9d'; ctx.font = 'bold 13px "JetBrains Mono"'; ctx.fillText('Q', qx+10, qy-6);
+    }
+    // Result
+    if (selP && selQ) {
+      const R = ecAdd(selP, selQ);
+      if (R) {
+        const [rx, ry] = ptToCanvas(R[0], R[1]);
+        ctx.fillStyle = '#ffd93d'; ctx.beginPath(); ctx.arc(rx, ry, 7, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = '#ffd93d'; ctx.font = 'bold 13px "JetBrains Mono"'; ctx.fillText('P+Q', rx+10, ry-6);
+        document.getElementById('interR').textContent = `P + Q = (${R[0]}, ${R[1]})`;
+      } else {
+        document.getElementById('interR').textContent = 'P + Q = 𝒪 (point at infinity)';
+      }
+    }
+  }
+
+  cv.addEventListener('click', (e) => {
+    const rect = cv.getBoundingClientRect();
+    const cx = (e.clientX - rect.left) * (W / rect.width);
+    const cy = (e.clientY - rect.top) * (H / rect.height);
+    const pt = canvasToNearest(cx, cy);
+    if (!pt) return;
+    if (!selP) {
+      selP = pt;
+      document.getElementById('interP').textContent = `P = (${pt[0]}, ${pt[1]})`;
+      document.getElementById('interQ').textContent = '';
+      document.getElementById('interR').textContent = '';
+    } else if (!selQ) {
+      selQ = pt;
+      document.getElementById('interQ').textContent = `Q = (${pt[0]}, ${pt[1]})`;
+    }
+    draw();
+  });
+
+  document.getElementById('interReset').addEventListener('click', () => {
+    selP = null; selQ = null;
+    document.getElementById('interP').textContent = '';
+    document.getElementById('interQ').textContent = '';
+    document.getElementById('interR').textContent = '';
+    document.getElementById('interInfo').textContent = 'Click a point on the canvas to select P, then click again for Q.';
+    draw();
+  });
+
+  document.getElementById('interDouble').addEventListener('click', () => {
+    if (selP) {
+      selQ = selP;
+      document.getElementById('interQ').textContent = `Q = P = (${selP[0]}, ${selP[1]})`;
+      draw();
+    }
+  });
+
+  // List all points
+  const el = document.getElementById('allPoints');
+  if (el) el.textContent = allPts.map(p => `(${p[0]},${p[1]})`).join(' · ');
+  draw();
+})();
+
+// ── Scalar Multiplication Visualizer ──
+(function(){
+  const cv = document.getElementById('cvScalarMult');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const margin = 20;
+  const G = [3, 6];
+  const slider = document.getElementById('scalarK');
+  const valEl = document.getElementById('scalarKVal');
+  const resEl = document.getElementById('scalarResult');
+  const stepsEl = document.getElementById('scalarSteps');
+
+  function ptToCanvas(x, y) {
+    return [margin + (x / FP) * (W - 2*margin), H - margin - (y / FP) * (H - 2*margin)];
+  }
+
+  function draw() {
+    const k = parseInt(slider.value);
+    valEl.textContent = k;
+    ctx.fillStyle = 'rgba(10,10,15,1)'; ctx.fillRect(0,0,W,H);
+    // All points dim
+    allPts.forEach(([x,y]) => {
+      const [px, py] = ptToCanvas(x, y);
+      ctx.fillStyle = 'rgba(100,255,218,0.12)';
+      ctx.beginPath(); ctx.arc(px, py, 2.5, 0, Math.PI*2); ctx.fill();
+    });
+    // Trace path
+    let prev = null;
+    const trail = [];
+    for (let i = 1; i <= k; i++) {
+      const pt = scalarMult(i, G);
+      if (pt) trail.push({i, pt});
+    }
+    // Draw connections
+    ctx.strokeStyle = 'rgba(108,92,231,0.3)'; ctx.lineWidth = 1;
+    for (let i = 1; i < trail.length; i++) {
+      const [ax, ay] = ptToCanvas(trail[i-1].pt[0], trail[i-1].pt[1]);
+      const [bx, by] = ptToCanvas(trail[i].pt[0], trail[i].pt[1]);
+      ctx.beginPath(); ctx.moveTo(ax, ay); ctx.lineTo(bx, by); ctx.stroke();
+    }
+    // Draw trail points
+    trail.forEach(({i, pt}, idx) => {
+      const [px, py] = ptToCanvas(pt[0], pt[1]);
+      const isLast = idx === trail.length - 1;
+      ctx.fillStyle = isLast ? '#ffd93d' : `rgba(108,92,231,${0.3 + 0.7*idx/trail.length})`;
+      ctx.beginPath(); ctx.arc(px, py, isLast ? 6 : 3.5, 0, Math.PI*2); ctx.fill();
+      if (isLast) {
+        ctx.fillStyle = '#ffd93d'; ctx.font = 'bold 12px "JetBrains Mono"';
+        ctx.fillText(`${k}G`, px+9, py-8);
+      }
+    });
+    // Generator
+    const [gx, gy] = ptToCanvas(G[0], G[1]);
+    ctx.strokeStyle = '#64ffda'; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.arc(gx, gy, 7, 0, Math.PI*2); ctx.stroke();
+    ctx.fillStyle = '#64ffda'; ctx.font = 'bold 12px "JetBrains Mono"'; ctx.fillText('G', gx+10, gy-8);
+
+    const R = scalarMult(k, G);
+    resEl.textContent = R ? `${k}G = (${R[0]}, ${R[1]})` : `${k}G = 𝒪`;
+
+    // Show binary expansion
+    const bits = k.toString(2);
+    let html = `<span style="color:#64ffda">k = ${k} = ${bits}₂</span><br>`;
+    html += `Double-and-add: ${bits.length} doublings, ${(bits.match(/1/g)||[]).length - 1} additions`;
+    stepsEl.innerHTML = html;
+  }
+  slider.addEventListener('input', draw);
+  draw();
+})();
+</script>
+</body>
+</html>
