@@ -1,0 +1,1339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>03 — AES: Design &amp; Implementation</title>
+
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.css" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/theme/black.min.css" id="theme" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/highlight/monokai.min.css" />
+
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@400;500;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet" />
+
+<style>
+  :root {
+    --r-background-color: #0a0a0f;
+    --r-main-font: 'DM Sans', sans-serif;
+    --r-main-font-size: 28px;
+    --r-main-color: #d4d4d8;
+    --r-heading-font: 'Playfair Display', serif;
+    --r-heading-color: #fafafa;
+    --r-heading-text-transform: none;
+    --r-code-font: 'JetBrains Mono', monospace;
+    --r-link-color: #60a5fa;
+    --r-link-color-hover: #93c5fd;
+    --r-selection-background-color: #2563eb;
+    --accent: #f59e0b;
+    --accent2: #10b981;
+    --accent3: #8b5cf6;
+    --accent4: #ef4444;
+    --dim: #71717a;
+    --surface: #18181b;
+    --surface2: #27272a;
+  }
+
+  .reveal { font-weight: 400; }
+  .reveal h1, .reveal h2, .reveal h3 { font-weight: 900; letter-spacing: -0.02em; line-height: 1.15; }
+  .reveal h1 { font-size: 2.4em; }
+  .reveal h2 { font-size: 1.6em; margin-bottom: 0.5em; }
+  .reveal h3 { font-size: 1.2em; color: var(--accent); font-family: 'DM Sans', sans-serif; font-weight: 700; }
+  .reveal p, .reveal li { line-height: 1.6; }
+  .reveal code { font-family: var(--r-code-font); font-size: 0.85em; }
+  .reveal pre { width: 100%; font-size: 0.48em; box-shadow: 0 4px 30px rgba(0,0,0,.5); border: 1px solid var(--surface2); border-radius: 8px; }
+  .reveal pre code { padding: 1.2em; line-height: 1.5; max-height: 520px; }
+
+  .accent  { color: var(--accent); }
+  .accent2 { color: var(--accent2); }
+  .accent3 { color: var(--accent3); }
+  .accent4 { color: var(--accent4); }
+  .dim     { color: var(--dim); }
+  .mono    { font-family: var(--r-code-font); }
+  .small   { font-size: 0.65em; }
+  .smaller { font-size: 0.55em; }
+  .tiny    { font-size: 0.45em; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5em; align-items: start; text-align: left; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1em; align-items: start; text-align: left; }
+
+  .box {
+    background: var(--surface);
+    border: 1px solid var(--surface2);
+    border-radius: 8px;
+    padding: 0.8em 1em;
+    margin: 0.3em 0;
+    text-align: left;
+  }
+  .box h3 { margin: 0 0 0.3em 0; font-size: 0.9em; }
+  .box p, .box ul { margin: 0; font-size: 0.75em; }
+  .box ul { padding-left: 1.2em; }
+
+  .highlight-box {
+    background: linear-gradient(135deg, rgba(245,158,11,.12), rgba(245,158,11,.03));
+    border: 1px solid rgba(245,158,11,.3);
+    border-radius: 8px;
+    padding: 0.8em 1em;
+    margin: 0.5em 0;
+  }
+
+  .state-grid {
+    display: inline-grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 2px;
+    font-family: var(--r-code-font);
+    font-size: 0.6em;
+  }
+  .state-grid .cell {
+    width: 58px; height: 38px;
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 4px;
+    font-weight: 700;
+  }
+
+  .pipeline-row {
+    display: flex; align-items: center; gap: 0.3em;
+    margin: 0.3em 0; font-size: 0.7em;
+  }
+  .pipeline-row .stage {
+    flex: 1; text-align: center; padding: 0.5em 0.3em;
+    border-radius: 6px; font-weight: 700;
+    font-family: var(--r-code-font);
+  }
+  .pipeline-row .arrow { color: var(--dim); font-size: 1.2em; flex: 0; }
+
+  .badge {
+    display: inline-block;
+    padding: 0.15em 0.6em;
+    border-radius: 999px;
+    font-size: 0.55em;
+    font-weight: 700;
+    vertical-align: middle;
+    font-family: var(--r-code-font);
+  }
+  .badge-amber  { background: rgba(245,158,11,.15); color: var(--accent); border: 1px solid rgba(245,158,11,.3); }
+  .badge-green  { background: rgba(16,185,129,.15); color: var(--accent2); border: 1px solid rgba(16,185,129,.3); }
+  .badge-purple { background: rgba(139,92,246,.15); color: var(--accent3); border: 1px solid rgba(139,92,246,.3); }
+  .badge-red    { background: rgba(239,68,68,.15); color: var(--accent4); border: 1px solid rgba(239,68,68,.3); }
+
+  table.clean {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.6em; margin: 0.5em 0;
+  }
+  table.clean th {
+    background: var(--surface2); color: var(--accent);
+    padding: 0.5em 0.8em; text-align: left;
+    font-family: var(--r-code-font); font-weight: 700;
+    border-bottom: 2px solid var(--accent);
+  }
+  table.clean td {
+    padding: 0.45em 0.8em; border-bottom: 1px solid var(--surface2);
+  }
+  table.clean tr:hover td { background: var(--surface); }
+
+  .ref { font-size: 0.42em; color: var(--dim); margin-top: 1.5em; }
+  .ref a { color: var(--dim); }
+
+  .slide-number { font-family: 'JetBrains Mono', monospace !important; }
+
+  /* Interactive S-box widget */
+  .sbox-widget { font-family: var(--r-code-font); font-size: 0.5em; }
+  .sbox-widget input {
+    background: var(--surface);
+    border: 1px solid var(--surface2);
+    color: var(--accent);
+    font-family: var(--r-code-font);
+    font-size: 1.2em;
+    padding: 0.3em 0.5em;
+    width: 4em;
+    text-align: center;
+    border-radius: 4px;
+  }
+  .sbox-widget .result {
+    color: var(--accent2);
+    font-size: 1.2em;
+    font-weight: 700;
+  }
+
+  /* Animated round flow */
+  @keyframes pulse-glow {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(245,158,11,.0); }
+    50% { box-shadow: 0 0 15px 2px rgba(245,158,11,.25); }
+  }
+  .glow { animation: pulse-glow 2s ease-in-out infinite; }
+</style>
+</head>
+
+<body>
+<div class="reveal">
+<div class="slides">
+
+<!-- ============================================================ -->
+<!-- SLIDE 01: TITLE -->
+<!-- ============================================================ -->
+<section>
+  <p class="small dim" style="letter-spacing:0.3em;text-transform:uppercase;margin-bottom:0.2em;">Presentation 03</p>
+  <h1 style="margin-bottom:0.15em;">AES</h1>
+  <p style="font-size:1.3em;color:var(--accent);font-family:'Playfair Display',serif;font-weight:700;margin:0;">Design &amp; Implementation</p>
+  <p class="small dim" style="margin-top:1.5em;">
+    FIPS 197 · Rijndael · GF(2<sup>8</sup>) Arithmetic · S-box Construction<br/>
+    Key Schedule · Hardware Architectures · Side-Channel Countermeasures
+  </p>
+  <p class="tiny dim" style="margin-top:2em;">
+    → / ← &nbsp;navigate &emsp; Esc &nbsp;overview &emsp; F &nbsp;fullscreen &emsp; ?print-pdf &nbsp;export
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 02: HISTORICAL CONTEXT -->
+<!-- ============================================================ -->
+<section>
+  <h2>Historical Context</h2>
+  <div class="two-col">
+    <div>
+      <h3>The Road to AES</h3>
+      <div class="box">
+        <p><span class="accent">1977</span> — DES published (FIPS 46), 56-bit key</p>
+        <p><span class="accent">1997</span> — NIST calls for AES candidates</p>
+        <p><span class="accent">1998</span> — 15 submissions from 12 countries</p>
+        <p><span class="accent">2000</span> — Rijndael selected as winner</p>
+        <p><span class="accent">2001</span> — FIPS 197 published</p>
+        <p><span class="accent">2003</span> — NSA approves for classified data</p>
+      </div>
+    </div>
+    <div>
+      <h3>Why Rijndael Won</h3>
+      <div class="box">
+        <p>✓ Clean algebraic structure — easy to analyze</p>
+        <p>✓ Best combination of security + performance</p>
+        <p>✓ Efficient on 8-bit µC through 64-bit CPUs</p>
+        <p>✓ Low memory footprint</p>
+        <p>✓ Parallelizable — suited to pipelining</p>
+        <p>✓ Simple key schedule</p>
+      </div>
+      <p class="small dim" style="margin-top:0.5em;">Designed by Joan Daemen &amp; Vincent Rijmen<br/>Katholieke Universiteit Leuven, Belgium</p>
+    </div>
+  </div>
+  <p class="ref">FIPS 197 (2001) · NIST AES Selection Report · Daemen &amp; Rijmen, "The Design of Rijndael" (Springer, 2002)</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 03: AES AT A GLANCE -->
+<!-- ============================================================ -->
+<section>
+  <h2>AES at a Glance</h2>
+  <div class="highlight-box" style="text-align:center;">
+    <span class="mono">Block size: <span class="accent">128 bits</span> &emsp; Key sizes: <span class="accent">128</span> / <span class="accent">192</span> / <span class="accent">256</span> bits &emsp; Rounds: <span class="accent">10</span> / <span class="accent">12</span> / <span class="accent">14</span></span>
+  </div>
+
+  <div class="two-col" style="margin-top:0.8em;">
+    <div>
+      <h3>Substitution–Permutation Network (SPN)</h3>
+      <p class="small">Each round applies four transformations to a 4×4 byte <em>State</em> matrix:</p>
+      <div class="pipeline-row">
+        <div class="stage" style="background:rgba(139,92,246,.2);color:var(--accent3);">SubBytes</div>
+        <div class="arrow">→</div>
+        <div class="stage" style="background:rgba(16,185,129,.2);color:var(--accent2);">ShiftRows</div>
+        <div class="arrow">→</div>
+        <div class="stage" style="background:rgba(96,165,250,.2);color:#60a5fa;">MixColumns</div>
+        <div class="arrow">→</div>
+        <div class="stage" style="background:rgba(245,158,11,.2);color:var(--accent);">AddRoundKey</div>
+      </div>
+      <p class="small dim">Final round omits MixColumns.</p>
+    </div>
+    <div>
+      <h3>Three Design Layers</h3>
+      <div class="box">
+        <p><span class="accent3">Non-linear layer</span> — SubBytes (S-box)<br/>
+           Provides <em>confusion</em> via GF(2<sup>8</sup>) inversion</p>
+      </div>
+      <div class="box">
+        <p><span class="accent2">Linear diffusion layer</span> — ShiftRows + MixColumns<br/>
+           Provides <em>diffusion</em> via byte transposition &amp; MDS mixing</p>
+      </div>
+      <div class="box">
+        <p><span class="accent">Key mixing layer</span> — AddRoundKey<br/>
+           XOR of state with round key</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 04: STATE MATRIX -->
+<!-- ============================================================ -->
+<section>
+  <h2>The State Matrix</h2>
+  <p class="small">AES operates on a 4×4 array of bytes arranged in <span class="accent">column-major</span> order.</p>
+  <div class="two-col" style="margin-top:0.5em;">
+    <div style="text-align:center;">
+      <h3>128-bit Input Block</h3>
+      <p class="mono small dim">in<sub>0</sub> in<sub>1</sub> in<sub>2</sub> … in<sub>15</sub></p>
+      <p class="small">↓ maps to columns ↓</p>
+      <div class="state-grid" style="margin-top:0.5em;">
+        <div class="cell" style="background:rgba(245,158,11,.15);">S<sub>0,0</sub></div>
+        <div class="cell" style="background:rgba(96,165,250,.15);">S<sub>0,1</sub></div>
+        <div class="cell" style="background:rgba(16,185,129,.15);">S<sub>0,2</sub></div>
+        <div class="cell" style="background:rgba(139,92,246,.15);">S<sub>0,3</sub></div>
+
+        <div class="cell" style="background:rgba(245,158,11,.15);">S<sub>1,0</sub></div>
+        <div class="cell" style="background:rgba(96,165,250,.15);">S<sub>1,1</sub></div>
+        <div class="cell" style="background:rgba(16,185,129,.15);">S<sub>1,2</sub></div>
+        <div class="cell" style="background:rgba(139,92,246,.15);">S<sub>1,3</sub></div>
+
+        <div class="cell" style="background:rgba(245,158,11,.15);">S<sub>2,0</sub></div>
+        <div class="cell" style="background:rgba(96,165,250,.15);">S<sub>2,1</sub></div>
+        <div class="cell" style="background:rgba(16,185,129,.15);">S<sub>2,2</sub></div>
+        <div class="cell" style="background:rgba(139,92,246,.15);">S<sub>2,3</sub></div>
+
+        <div class="cell" style="background:rgba(245,158,11,.15);">S<sub>3,0</sub></div>
+        <div class="cell" style="background:rgba(96,165,250,.15);">S<sub>3,1</sub></div>
+        <div class="cell" style="background:rgba(16,185,129,.15);">S<sub>3,2</sub></div>
+        <div class="cell" style="background:rgba(139,92,246,.15);">S<sub>3,3</sub></div>
+      </div>
+      <p class="tiny dim" style="margin-top:0.5em;">S<sub>r,c</sub> = in[r + 4c]</p>
+    </div>
+    <div>
+      <h3>Column-Major Layout</h3>
+      <div class="box">
+        <p class="mono small">
+          in[0]  in[4]  in[8]   in[12]<br/>
+          in[1]  in[5]  in[9]   in[13]<br/>
+          in[2]  in[6]  in[10]  in[14]<br/>
+          in[3]  in[7]  in[11]  in[15]
+        </p>
+      </div>
+      <p class="small" style="margin-top:0.8em;">Each <span class="accent">column</span> is a 32-bit word — this is critical for efficient 32-bit CPU implementations using T-tables.</p>
+      <p class="small">The state is transformed round-by-round and written back in column-major order to produce the ciphertext.</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 05: HIGH-LEVEL ROUND STRUCTURE -->
+<!-- ============================================================ -->
+<section>
+  <h2>Round Structure</h2>
+  <div style="text-align:center;">
+    <div class="box" style="display:inline-block;text-align:left;font-size:0.72em;max-width:680px;">
+      <p class="mono"><span class="accent">State</span> = Plaintext</p>
+      <p class="mono"><span class="dim">// Initial round key addition</span></p>
+      <p class="mono"><span class="accent">AddRoundKey</span>(State, Key<sub>0</sub>)</p>
+      <p class="mono">&nbsp;</p>
+      <p class="mono"><span class="dim">// Main rounds 1 … N<sub>r</sub>−1</span></p>
+      <p class="mono"><span class="accent4">for</span> r = 1 <span class="accent4">to</span> N<sub>r</sub> − 1:</p>
+      <p class="mono">&emsp;&emsp;<span class="accent3">SubBytes</span>(State)</p>
+      <p class="mono">&emsp;&emsp;<span class="accent2">ShiftRows</span>(State)</p>
+      <p class="mono">&emsp;&emsp;<span style="color:#60a5fa;">MixColumns</span>(State)</p>
+      <p class="mono">&emsp;&emsp;<span class="accent">AddRoundKey</span>(State, Key<sub>r</sub>)</p>
+      <p class="mono">&nbsp;</p>
+      <p class="mono"><span class="dim">// Final round (no MixColumns)</span></p>
+      <p class="mono"><span class="accent3">SubBytes</span>(State)</p>
+      <p class="mono"><span class="accent2">ShiftRows</span>(State)</p>
+      <p class="mono"><span class="accent">AddRoundKey</span>(State, Key<sub>N<sub>r</sub></sub>)</p>
+      <p class="mono">&nbsp;</p>
+      <p class="mono">Ciphertext = <span class="accent">State</span></p>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:0.5em;">
+    <table class="clean" style="max-width:500px;margin:0 auto;">
+      <tr><th>Key Length</th><th>Rounds (N<sub>r</sub>)</th><th>Round Keys</th></tr>
+      <tr><td>128 bits</td><td class="accent">10</td><td>11</td></tr>
+      <tr><td>192 bits</td><td class="accent">12</td><td>13</td></tr>
+      <tr><td>256 bits</td><td class="accent">14</td><td>15</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 06: GF(2^8) ARITHMETIC RECAP -->
+<!-- ============================================================ -->
+<section>
+  <h2>GF(2<sup>8</sup>) Arithmetic Recap</h2>
+  <p class="small">All AES byte operations live in the finite field GF(2<sup>8</sup>) defined by the irreducible polynomial:</p>
+  <div class="highlight-box" style="text-align:center;">
+    <span class="mono" style="font-size:1.1em;">m(x) = x<sup>8</sup> + x<sup>4</sup> + x<sup>3</sup> + x + 1 &emsp; <span class="dim">(0x11B)</span></span>
+  </div>
+  <div class="two-col" style="margin-top:0.5em;">
+    <div>
+      <h3>Addition</h3>
+      <div class="box">
+        <p>Coefficient-wise XOR</p>
+        <p class="mono small accent">a(x) ⊕ b(x)</p>
+        <p class="small dim">No carries — each bit is independent.</p>
+      </div>
+      <h3 style="margin-top:0.5em;">Multiplication</h3>
+      <div class="box">
+        <p>Polynomial multiply then reduce mod m(x)</p>
+        <p class="mono small accent">a(x) · b(x) mod m(x)</p>
+        <p class="small dim">Efficiently implemented via <code>xtime()</code> — left-shift + conditional XOR with 0x1B.</p>
+      </div>
+    </div>
+    <div>
+      <h3>xtime() — Multiply by x</h3>
+<pre><code class="language-python">def xtime(a):
+    """Multiply by x in GF(2^8)"""
+    result = a << 1
+    if result & 0x100:      # overflow?
+        result ^= 0x11B    # reduce mod m(x)
+    return result & 0xFF</code></pre>
+      <h3 style="margin-top:0.5em;">Multiplicative Inverse</h3>
+      <div class="box">
+        <p class="small">Every non-zero element has a unique inverse: <span class="mono accent">a<sup>−1</sup></span> such that <span class="mono">a · a<sup>−1</sup> = 1</span></p>
+        <p class="small dim">By Fermat's little theorem: a<sup>−1</sup> = a<sup>254</sup> in GF(2<sup>8</sup>)</p>
+        <p class="small dim">Or use the Extended Euclidean Algorithm.</p>
+      </div>
+    </div>
+  </div>
+  <p class="ref">FIPS 197 §4.2 · Presentation 01 covers GF(2<sup>8</sup>) in full depth</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 07: SubBytes — S-box Construction -->
+<!-- ============================================================ -->
+<section>
+  <h2>SubBytes — S-box Construction</h2>
+  <p class="small">The only non-linear operation in AES. Each byte is independently transformed.</p>
+  <div class="two-col" style="margin-top:0.3em;">
+    <div>
+      <h3>Two-Step Construction</h3>
+      <div class="box">
+        <p><span class="badge badge-amber">Step 1</span> Multiplicative inverse in GF(2<sup>8</sup>)</p>
+        <p class="small">b = a<sup>−1</sup> &emsp; (with 0<sup>−1</sup> defined as 0)</p>
+        <p class="small dim">Provides non-linearity — max algebraic degree.</p>
+      </div>
+      <div class="box" style="margin-top:0.4em;">
+        <p><span class="badge badge-green">Step 2</span> Affine transformation over GF(2)</p>
+        <p class="mono small">b<sub>i</sub>' = b<sub>i</sub> ⊕ b<sub>(i+4)mod8</sub> ⊕ b<sub>(i+5)mod8</sub><br/>
+        &emsp;&emsp; ⊕ b<sub>(i+6)mod8</sub> ⊕ b<sub>(i+7)mod8</sub> ⊕ c<sub>i</sub></p>
+        <p class="small dim">where c = 0x63 = 01100011₂</p>
+      </div>
+      <p class="small" style="margin-top:0.5em;">The affine step breaks the pure algebraic structure of the inverse, preventing interpolation attacks.</p>
+    </div>
+    <div>
+      <h3>S-box Properties</h3>
+      <div class="box">
+        <p><span class="accent2">Non-linearity:</span> 112 (maximum for 8-bit bijection)</p>
+        <p><span class="accent2">Algebraic degree:</span> 7</p>
+        <p><span class="accent2">Differential uniformity:</span> 4</p>
+        <p><span class="accent2">Fixed points:</span> 0 (no byte maps to itself)</p>
+        <p><span class="accent2">No opposite fixed points</span></p>
+      </div>
+      <h3 style="margin-top:0.5em;">Example</h3>
+      <div class="box">
+        <p class="mono small">
+          S(0x00) = <span class="accent">0x63</span> &emsp; S(0x01) = <span class="accent">0x7C</span><br/>
+          S(0x53) = <span class="accent">0xED</span> &emsp; S(0xFF) = <span class="accent">0x16</span>
+        </p>
+        <p class="tiny dim">Input 0x53: inverse in GF(2<sup>8</sup>) = 0xCA, then affine → 0xED</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 08: S-box FULL TABLE -->
+<!-- ============================================================ -->
+<section>
+  <h2>The AES S-box <span class="dim small">(complete lookup table)</span></h2>
+  <div style="overflow-x:auto;">
+    <table class="clean" style="font-size:0.42em;font-family:var(--r-code-font);text-align:center;">
+      <tr>
+        <th></th><th>.0</th><th>.1</th><th>.2</th><th>.3</th><th>.4</th><th>.5</th><th>.6</th><th>.7</th><th>.8</th><th>.9</th><th>.a</th><th>.b</th><th>.c</th><th>.d</th><th>.e</th><th>.f</th>
+      </tr>
+      <tr><td style="color:var(--accent);font-weight:700;">0.</td><td>63</td><td>7c</td><td>77</td><td>7b</td><td>f2</td><td>6b</td><td>6f</td><td>c5</td><td>30</td><td>01</td><td>67</td><td>2b</td><td>fe</td><td>d7</td><td>ab</td><td>76</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">1.</td><td>ca</td><td>82</td><td>c9</td><td>7d</td><td>fa</td><td>59</td><td>47</td><td>f0</td><td>ad</td><td>d4</td><td>a2</td><td>af</td><td>9c</td><td>a4</td><td>72</td><td>c0</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">2.</td><td>b7</td><td>fd</td><td>93</td><td>26</td><td>36</td><td>3f</td><td>f7</td><td>cc</td><td>34</td><td>a5</td><td>e5</td><td>f1</td><td>71</td><td>d8</td><td>31</td><td>15</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">3.</td><td>04</td><td>c7</td><td>23</td><td>c3</td><td>18</td><td>96</td><td>05</td><td>9a</td><td>07</td><td>12</td><td>80</td><td>e2</td><td>eb</td><td>27</td><td>b2</td><td>75</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">4.</td><td>09</td><td>83</td><td>2c</td><td>1a</td><td>1b</td><td>6e</td><td>5a</td><td>a0</td><td>52</td><td>3b</td><td>d6</td><td>b3</td><td>29</td><td>e3</td><td>2f</td><td>84</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">5.</td><td>53</td><td>d1</td><td>00</td><td>ed</td><td>20</td><td>fc</td><td>b1</td><td>5b</td><td>6a</td><td>cb</td><td>be</td><td>39</td><td>4a</td><td>4c</td><td>58</td><td>cf</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">6.</td><td>d0</td><td>ef</td><td>aa</td><td>fb</td><td>43</td><td>4d</td><td>33</td><td>85</td><td>45</td><td>f9</td><td>02</td><td>7f</td><td>50</td><td>3c</td><td>9f</td><td>a8</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">7.</td><td>51</td><td>a3</td><td>40</td><td>8f</td><td>92</td><td>9d</td><td>38</td><td>f5</td><td>bc</td><td>b6</td><td>da</td><td>21</td><td>10</td><td>ff</td><td>f3</td><td>d2</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">8.</td><td>cd</td><td>0c</td><td>13</td><td>ec</td><td>5f</td><td>97</td><td>44</td><td>17</td><td>c4</td><td>a7</td><td>7e</td><td>3d</td><td>64</td><td>5d</td><td>19</td><td>73</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">9.</td><td>60</td><td>81</td><td>4f</td><td>dc</td><td>22</td><td>2a</td><td>90</td><td>88</td><td>46</td><td>ee</td><td>b8</td><td>14</td><td>de</td><td>5e</td><td>0b</td><td>db</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">a.</td><td>e0</td><td>32</td><td>3a</td><td>0a</td><td>49</td><td>06</td><td>24</td><td>5c</td><td>c2</td><td>d3</td><td>ac</td><td>62</td><td>91</td><td>95</td><td>e4</td><td>79</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">b.</td><td>e7</td><td>c8</td><td>37</td><td>6d</td><td>8d</td><td>d5</td><td>4e</td><td>a9</td><td>6c</td><td>56</td><td>f4</td><td>ea</td><td>65</td><td>7a</td><td>ae</td><td>08</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">c.</td><td>ba</td><td>78</td><td>25</td><td>2e</td><td>1c</td><td>a6</td><td>b4</td><td>c6</td><td>e8</td><td>dd</td><td>74</td><td>1f</td><td>4b</td><td>bd</td><td>8b</td><td>8a</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">d.</td><td>70</td><td>3e</td><td>b5</td><td>66</td><td>48</td><td>03</td><td>f6</td><td>0e</td><td>61</td><td>35</td><td>57</td><td>b9</td><td>86</td><td>c1</td><td>1d</td><td>9e</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">e.</td><td>e1</td><td>f8</td><td>98</td><td>11</td><td>69</td><td>d9</td><td>8e</td><td>94</td><td>9b</td><td>1e</td><td>87</td><td>e9</td><td>ce</td><td>55</td><td>28</td><td>df</td></tr>
+      <tr><td style="color:var(--accent);font-weight:700;">f.</td><td>8c</td><td>a1</td><td>89</td><td>0d</td><td>bf</td><td>e6</td><td>42</td><td>68</td><td>41</td><td>99</td><td>2d</td><td>0f</td><td>b0</td><td>54</td><td>bb</td><td>16</td></tr>
+    </table>
+  </div>
+  <p class="tiny dim" style="text-align:center;">Read as: S(<span class="mono">0xRC</span>) → row <span class="mono">R</span>, column <span class="mono">C</span>. Example: S(0x53) = row 5, col 3 → <span class="accent">ED</span></p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 09: ShiftRows -->
+<!-- ============================================================ -->
+<section>
+  <h2>ShiftRows</h2>
+  <p class="small">A byte-level transposition that shifts each row cyclically to the left.</p>
+  <div style="text-align:center;margin-top:1em;">
+    <div style="display:inline-block;text-align:left;">
+      <div style="display:flex;gap:3em;align-items:start;">
+        <!-- Before -->
+        <div>
+          <p class="small dim" style="text-align:center;margin-bottom:0.3em;">Before ShiftRows</p>
+          <div class="state-grid">
+            <div class="cell" style="background:rgba(245,158,11,.2);color:var(--accent);">S₀₀</div>
+            <div class="cell" style="background:rgba(245,158,11,.2);color:var(--accent);">S₀₁</div>
+            <div class="cell" style="background:rgba(245,158,11,.2);color:var(--accent);">S₀₂</div>
+            <div class="cell" style="background:rgba(245,158,11,.2);color:var(--accent);">S₀₃</div>
+            <div class="cell" style="background:rgba(16,185,129,.2);color:var(--accent2);">S₁₀</div>
+            <div class="cell" style="background:rgba(16,185,129,.2);color:var(--accent2);">S₁₁</div>
+            <div class="cell" style="background:rgba(16,185,129,.2);color:var(--accent2);">S₁₂</div>
+            <div class="cell" style="background:rgba(16,185,129,.2);color:var(--accent2);">S₁₃</div>
+            <div class="cell" style="background:rgba(96,165,250,.2);color:#60a5fa;">S₂₀</div>
+            <div class="cell" style="background:rgba(96,165,250,.2);color:#60a5fa;">S₂₁</div>
+            <div class="cell" style="background:rgba(96,165,250,.2);color:#60a5fa;">S₂₂</div>
+            <div class="cell" style="background:rgba(96,165,250,.2);color:#60a5fa;">S₂₃</div>
+            <div class="cell" style="background:rgba(139,92,246,.2);color:var(--accent3);">S₃₀</div>
+            <div class="cell" style="background:rgba(139,92,246,.2);color:var(--accent3);">S₃₁</div>
+            <div class="cell" style="background:rgba(139,92,246,.2);color:var(--accent3);">S₃₂</div>
+            <div class="cell" style="background:rgba(139,92,246,.2);color:var(--accent3);">S₃₃</div>
+          </div>
+        </div>
+        <!-- Arrow -->
+        <div style="align-self:center;font-size:1.5em;color:var(--dim);">→</div>
+        <!-- After -->
+        <div>
+          <p class="small dim" style="text-align:center;margin-bottom:0.3em;">After ShiftRows</p>
+          <div class="state-grid">
+            <div class="cell" style="background:rgba(245,158,11,.2);color:var(--accent);">S₀₀</div>
+            <div class="cell" style="background:rgba(245,158,11,.2);color:var(--accent);">S₀₁</div>
+            <div class="cell" style="background:rgba(245,158,11,.2);color:var(--accent);">S₀₂</div>
+            <div class="cell" style="background:rgba(245,158,11,.2);color:var(--accent);">S₀₃</div>
+            <div class="cell" style="background:rgba(16,185,129,.2);color:var(--accent2);">S₁₁</div>
+            <div class="cell" style="background:rgba(16,185,129,.2);color:var(--accent2);">S₁₂</div>
+            <div class="cell" style="background:rgba(16,185,129,.2);color:var(--accent2);">S₁₃</div>
+            <div class="cell" style="background:rgba(16,185,129,.2);color:var(--accent2);">S₁₀</div>
+            <div class="cell" style="background:rgba(96,165,250,.2);color:#60a5fa;">S₂₂</div>
+            <div class="cell" style="background:rgba(96,165,250,.2);color:#60a5fa;">S₂₃</div>
+            <div class="cell" style="background:rgba(96,165,250,.2);color:#60a5fa;">S₂₀</div>
+            <div class="cell" style="background:rgba(96,165,250,.2);color:#60a5fa;">S₂₁</div>
+            <div class="cell" style="background:rgba(139,92,246,.2);color:var(--accent3);">S₃₃</div>
+            <div class="cell" style="background:rgba(139,92,246,.2);color:var(--accent3);">S₃₀</div>
+            <div class="cell" style="background:rgba(139,92,246,.2);color:var(--accent3);">S₃₁</div>
+            <div class="cell" style="background:rgba(139,92,246,.2);color:var(--accent3);">S₃₂</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div style="text-align:center;margin-top:1em;">
+    <table class="clean" style="max-width:400px;margin:0 auto;">
+      <tr><th>Row</th><th>Shift (bytes left)</th></tr>
+      <tr><td style="color:var(--accent);">Row 0</td><td>0 (no shift)</td></tr>
+      <tr><td style="color:var(--accent2);">Row 1</td><td>1</td></tr>
+      <tr><td style="color:#60a5fa;">Row 2</td><td>2</td></tr>
+      <tr><td style="color:var(--accent3);">Row 3</td><td>3</td></tr>
+    </table>
+  </div>
+  <p class="small" style="text-align:center;margin-top:0.5em;">
+    <span class="accent">Purpose:</span> Prevents each column from being encrypted independently —<br/>
+    ensures bytes from different columns interact in MixColumns.
+  </p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 10: MixColumns -->
+<!-- ============================================================ -->
+<section>
+  <h2>MixColumns</h2>
+  <p class="small">Each column is treated as a polynomial over GF(2<sup>8</sup>) and multiplied by a fixed MDS polynomial.</p>
+  <div class="two-col" style="margin-top:0.5em;">
+    <div>
+      <h3>Matrix Multiplication in GF(2<sup>8</sup>)</h3>
+      <div class="box" style="text-align:center;font-family:var(--r-code-font);font-size:0.8em;">
+        <p>
+          ⎡ <span class="accent">02</span>&nbsp;<span class="accent2">03</span>&nbsp;01&nbsp;01 ⎤ &emsp; ⎡ S₀ ⎤<br/>
+          ⎢ 01&nbsp;<span class="accent">02</span>&nbsp;<span class="accent2">03</span>&nbsp;01 ⎥ &emsp; ⎢ S₁ ⎥<br/>
+          ⎢ 01&nbsp;01&nbsp;<span class="accent">02</span>&nbsp;<span class="accent2">03</span> ⎥ · ⎢ S₂ ⎥<br/>
+          ⎣ <span class="accent2">03</span>&nbsp;01&nbsp;01&nbsp;<span class="accent">02</span> ⎦ &emsp; ⎣ S₃ ⎦
+        </p>
+      </div>
+      <p class="small" style="margin-top:0.5em;">
+        Only uses coefficients <span class="mono accent">01</span>, <span class="mono accent">02</span>, <span class="mono accent">03</span>:
+      </p>
+      <div class="box">
+        <p class="small mono">×01 = identity</p>
+        <p class="small mono">×02 = xtime(a)</p>
+        <p class="small mono">×03 = xtime(a) ⊕ a</p>
+      </div>
+    </div>
+    <div>
+      <h3>MDS Property</h3>
+      <div class="box">
+        <p><span class="accent">Branch number = 5</span> (maximum possible for 4×4)</p>
+        <p class="small">A difference in 1 input byte propagates to <em>all 4</em> output bytes.</p>
+        <p class="small">Any 2-byte input difference → at least 3-byte output difference.</p>
+      </div>
+      <h3 style="margin-top:0.5em;">Inverse MixColumns</h3>
+      <div class="box">
+        <p class="small">For decryption, use the inverse matrix with coefficients:</p>
+        <p class="mono small accent4">0E, 0B, 0D, 09</p>
+        <p class="small dim">These are more expensive to compute — a key factor in hardware design.</p>
+      </div>
+    </div>
+  </div>
+  <p class="ref">The polynomial c(x) = {03}x³ + {01}x² + {01}x + {02} is coprime to x⁴ + 1, guaranteeing invertibility.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 11: AddRoundKey -->
+<!-- ============================================================ -->
+<section>
+  <h2>AddRoundKey</h2>
+  <div class="two-col">
+    <div>
+      <p class="small">The simplest transformation: bitwise XOR of the state with the round key.</p>
+      <div class="highlight-box" style="text-align:center;">
+        <span class="mono" style="font-size:1.2em;">State'<sub>i,j</sub> = State<sub>i,j</sub> <span class="accent">⊕</span> Key<sub>i,j</sub></span>
+      </div>
+      <div class="box" style="margin-top:0.8em;">
+        <h3>Properties</h3>
+        <p class="small">✓ XOR is its own inverse — same for encrypt/decrypt</p>
+        <p class="small">✓ Zero-cost in hardware — just wire connections</p>
+        <p class="small">✓ Introduces the secret key into every round</p>
+        <p class="small">✓ Without it, the cipher would be a public permutation</p>
+      </div>
+    </div>
+    <div>
+      <h3>Round Key Derivation</h3>
+      <p class="small">Each 128-bit round key is drawn from the <span class="accent">expanded key schedule</span>:</p>
+      <div class="box">
+        <p class="mono small">
+          Key<sub>r</sub> = W[4r] ‖ W[4r+1] ‖ W[4r+2] ‖ W[4r+3]
+        </p>
+        <p class="small dim">where W[] is the expanded key array (44 words for AES-128)</p>
+      </div>
+      <h3 style="margin-top:0.8em;">Efficient 32-bit Implementation</h3>
+      <div class="box">
+        <p class="small">On a 32-bit CPU, AddRoundKey is 4 XOR operations (one per column-word).</p>
+        <p class="mono small dim">state[c] ^= roundkey[c]; // c = 0..3</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 12: KEY SCHEDULE -->
+<!-- ============================================================ -->
+<section>
+  <h2>Key Schedule <span class="dim small">(AES-128)</span></h2>
+  <p class="small">Expands the 128-bit cipher key into 44 × 32-bit words (11 round keys).</p>
+  <div class="two-col" style="margin-top:0.5em;">
+    <div>
+      <h3>Key Expansion Algorithm</h3>
+<pre><code class="language-python">def key_expansion(key):
+    W = [0] * 44
+    # First 4 words = cipher key
+    for i in range(4):
+        W[i] = key_word(key, i)
+
+    for i in range(4, 44):
+        temp = W[i - 1]
+        if i % 4 == 0:
+            temp = sub_word(rot_word(temp))
+            temp ^= RCON[i // 4]
+        W[i] = W[i - 4] ^ temp
+    return W</code></pre>
+    </div>
+    <div>
+      <h3>Core Functions</h3>
+      <div class="box">
+        <p><span class="accent">RotWord</span> — Rotate 4 bytes left by 1 position</p>
+        <p class="mono small">[a₀ a₁ a₂ a₃] → [a₁ a₂ a₃ a₀]</p>
+      </div>
+      <div class="box" style="margin-top:0.3em;">
+        <p><span class="accent">SubWord</span> — Apply S-box to each of 4 bytes</p>
+        <p class="mono small">[a₀ a₁ a₂ a₃] → [S(a₀) S(a₁) S(a₂) S(a₃)]</p>
+      </div>
+      <div class="box" style="margin-top:0.3em;">
+        <p><span class="accent">Rcon[i]</span> — Round constant</p>
+        <p class="mono small">= [x<sup>i−1</sup>, 00, 00, 00] in GF(2<sup>8</sup>)</p>
+        <p class="tiny dim">01, 02, 04, 08, 10, 20, 40, 80, 1B, 36</p>
+      </div>
+    </div>
+  </div>
+  <div class="highlight-box" style="text-align:center;margin-top:0.5em;">
+    <span class="small"><span class="accent">Design rationale:</span> Rcon prevents symmetry between round keys. SubWord introduces non-linearity. Simple XOR-chain propagates change across all words.</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 13: KEY SCHEDULE — 192 & 256 -->
+<!-- ============================================================ -->
+<section>
+  <h2>Key Schedule — AES-192 &amp; AES-256</h2>
+  <div class="two-col">
+    <div>
+      <h3>AES-192 (N<sub>k</sub> = 6)</h3>
+      <div class="box">
+        <p class="small">Expands 192-bit key into 52 words (13 round keys)</p>
+        <p class="small">Non-linear function (SubWord + RotWord + Rcon) applied every 6th word:</p>
+        <p class="mono small dim">if i mod 6 == 0: apply g()</p>
+        <p class="small">Otherwise: simple XOR chain</p>
+      </div>
+    </div>
+    <div>
+      <h3>AES-256 (N<sub>k</sub> = 8)</h3>
+      <div class="box">
+        <p class="small">Expands 256-bit key into 60 words (15 round keys)</p>
+        <p class="small"><span class="accent4">Extra SubWord</span> applied at position 4 within each 8-word group:</p>
+        <p class="mono small dim">if i mod 8 == 0: apply g()<br/>if i mod 8 == 4: SubWord only</p>
+        <p class="small">This extra non-linear step was added to resist related-key attacks.</p>
+      </div>
+    </div>
+  </div>
+  <div style="margin-top:0.8em;">
+    <table class="clean" style="max-width:700px;margin:0 auto;">
+      <tr><th>Variant</th><th>Key Words (N<sub>k</sub>)</th><th>Expanded Words</th><th>Round Keys</th><th>g() applied every</th></tr>
+      <tr><td>AES-128</td><td>4</td><td>44</td><td>11</td><td>4 words</td></tr>
+      <tr><td>AES-192</td><td>6</td><td>52</td><td>13</td><td>6 words</td></tr>
+      <tr><td>AES-256</td><td>8</td><td>60</td><td>15</td><td>8 words (+ SubWord at 4)</td></tr>
+    </table>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 14: DECRYPTION — INVERSE CIPHER -->
+<!-- ============================================================ -->
+<section>
+  <h2>Decryption — Inverse Cipher</h2>
+  <p class="small">AES decryption applies the inverse of each operation in reverse order.</p>
+  <div class="two-col" style="margin-top:0.5em;">
+    <div>
+      <h3>Direct Inverse</h3>
+      <div class="box" style="font-size:0.72em;font-family:var(--r-code-font);">
+        <p><span class="accent">AddRoundKey</span>(State, Key<sub>N<sub>r</sub></sub>)</p>
+        <p><span class="accent4">for</span> r = N<sub>r</sub>−1 <span class="accent4">downto</span> 1:</p>
+        <p>&emsp;<span class="accent2">InvShiftRows</span>(State)</p>
+        <p>&emsp;<span class="accent3">InvSubBytes</span>(State)</p>
+        <p>&emsp;<span class="accent">AddRoundKey</span>(State, Key<sub>r</sub>)</p>
+        <p>&emsp;<span style="color:#60a5fa;">InvMixColumns</span>(State)</p>
+        <p><span class="accent2">InvShiftRows</span>(State)</p>
+        <p><span class="accent3">InvSubBytes</span>(State)</p>
+        <p><span class="accent">AddRoundKey</span>(State, Key<sub>0</sub>)</p>
+      </div>
+    </div>
+    <div>
+      <h3>Equivalent Inverse Cipher</h3>
+      <div class="box">
+        <p class="small"><span class="accent">Key insight:</span> By reordering InvSubBytes↔InvShiftRows and InvMixColumns↔AddRoundKey, the inverse cipher has the same structure as encryption.</p>
+        <p class="small" style="margin-top:0.3em;">This requires applying <span class="mono accent4">InvMixColumns</span> to round keys 1…N<sub>r</sub>−1 during key expansion.</p>
+      </div>
+      <h3 style="margin-top:0.5em;">Inverse Operations</h3>
+      <table class="clean" style="font-size:0.65em;">
+        <tr><th>Encrypt</th><th>Decrypt</th><th>Cost change</th></tr>
+        <tr><td>SubBytes</td><td>InvSubBytes</td><td>Same (separate LUT)</td></tr>
+        <tr><td>ShiftRows</td><td>InvShiftRows</td><td>Shift right</td></tr>
+        <tr><td>MixColumns ×{02,03}</td><td>InvMixColumns ×{09,0B,0D,0E}</td><td class="accent4">~3× more expensive</td></tr>
+        <tr><td>AddRoundKey</td><td>AddRoundKey</td><td>XOR = self-inverse</td></tr>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 15: T-TABLE OPTIMISATION -->
+<!-- ============================================================ -->
+<section>
+  <h2>T-Table Optimisation <span class="dim small">(Software)</span></h2>
+  <p class="small">On 32-bit processors, SubBytes + ShiftRows + MixColumns can be fused into four 256-entry 32-bit lookup tables.</p>
+  <div class="two-col" style="margin-top:0.5em;">
+    <div>
+      <h3>T-box Definition</h3>
+      <div class="box">
+        <p class="mono small">
+          T₀[a] = [ <span class="accent">02</span>·S(a), S(a), S(a), <span class="accent2">03</span>·S(a) ]<br/>
+          T₁[a] = [ <span class="accent2">03</span>·S(a), <span class="accent">02</span>·S(a), S(a), S(a) ]<br/>
+          T₂[a] = [ S(a), <span class="accent2">03</span>·S(a), <span class="accent">02</span>·S(a), S(a) ]<br/>
+          T₃[a] = [ S(a), S(a), <span class="accent2">03</span>·S(a), <span class="accent">02</span>·S(a) ]
+        </p>
+      </div>
+      <h3 style="margin-top:0.5em;">One Column of Output</h3>
+      <div class="box">
+        <p class="mono small accent">e<sub>j</sub> = T₀[a<sub>0,j</sub>] ⊕ T₁[a<sub>1,j+1</sub>] ⊕ T₂[a<sub>2,j+2</sub>] ⊕ T₃[a<sub>3,j+3</sub>] ⊕ K<sub>j</sub></p>
+      </div>
+    </div>
+    <div>
+      <h3>Performance</h3>
+      <table class="clean">
+        <tr><th>Metric</th><th>S-box</th><th>T-table</th></tr>
+        <tr><td>Tables</td><td>1 × 256 B</td><td>4 × 1 KB</td></tr>
+        <tr><td>Total memory</td><td>256 B</td><td>4 KB</td></tr>
+        <tr><td>Lookups/round</td><td>16</td><td>16</td></tr>
+        <tr><td>XORs/round</td><td>many</td><td>16 (32-bit)</td></tr>
+        <tr><td>Ops per round</td><td>~160</td><td>~20</td></tr>
+      </table>
+      <div class="box" style="margin-top:0.5em;border-color:rgba(239,68,68,.3);">
+        <p class="small accent4">⚠ Cache-timing vulnerability</p>
+        <p class="tiny">Table access patterns leak key-dependent indices. Bernstein (2005) demonstrated full AES key recovery from timing measurements alone.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 16: AES-NI — Hardware Instructions -->
+<!-- ============================================================ -->
+<section>
+  <h2>AES-NI — Hardware Instructions</h2>
+  <p class="small">Intel/AMD processors include dedicated AES instructions since Westmere (2010).</p>
+  <div class="two-col" style="margin-top:0.5em;">
+    <div>
+      <h3>Instruction Set</h3>
+      <table class="clean">
+        <tr><th>Instruction</th><th>Operation</th></tr>
+        <tr><td class="mono accent">AESENC</td><td>One encryption round</td></tr>
+        <tr><td class="mono accent">AESENCLAST</td><td>Final encryption round</td></tr>
+        <tr><td class="mono accent">AESDEC</td><td>One decryption round</td></tr>
+        <tr><td class="mono accent">AESDECLAST</td><td>Final decryption round</td></tr>
+        <tr><td class="mono accent">AESKEYGENASSIST</td><td>Key schedule helper</td></tr>
+        <tr><td class="mono accent">AESIMC</td><td>InvMixColumns (for EqInv keys)</td></tr>
+      </table>
+    </div>
+    <div>
+      <h3>Performance Impact</h3>
+      <div class="box">
+        <p><span class="accent">AESENC</span> — single cycle latency, fully pipelined</p>
+        <p class="small">With AES-NI, AES-128-CTR achieves <span class="accent2">~4 cycles/byte</span> on modern x86.</p>
+        <p class="small">That's <span class="accent2">~8 GB/s</span> single-core at 4 GHz.</p>
+      </div>
+      <h3 style="margin-top:0.5em;">Security Benefits</h3>
+      <div class="box">
+        <p class="small">✓ Constant-time execution — immune to cache-timing attacks</p>
+        <p class="small">✓ No S-box/T-table in memory — no table access patterns</p>
+        <p class="small">✓ S-box computed in hardware via GF(2<sup>4</sup>)² composite field</p>
+      </div>
+    </div>
+  </div>
+  <p class="ref">Intel® Advanced Encryption Standard Instructions (AES-NI) White Paper (2010) · ARM Cryptographic Extension (ARMv8-A, 2011)</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 17: HARDWARE ARCHITECTURES -->
+<!-- ============================================================ -->
+<section>
+  <h2>Hardware Architectures</h2>
+  <p class="small">AES hardware spans a wide design space from compact IoT to high-throughput network processors.</p>
+  <div class="three-col" style="margin-top:0.5em;">
+    <div class="box">
+      <h3 style="color:var(--accent2);">Basic Iterative</h3>
+      <p class="tiny">Single round, reused N<sub>r</sub> times</p>
+      <p class="tiny"><span class="accent">Area:</span> ~3,000–5,000 GE</p>
+      <p class="tiny"><span class="accent">Throughput:</span> ~1–3 Gbps</p>
+      <p class="tiny"><span class="accent">Latency:</span> 10–14 cycles</p>
+      <p class="tiny dim">Ideal for area-constrained IoT &amp; smart cards</p>
+    </div>
+    <div class="box">
+      <h3 style="color:#60a5fa;">Inner-Round Pipelined</h3>
+      <p class="tiny">Pipeline registers within a single round</p>
+      <p class="tiny"><span class="accent">Area:</span> ~8,000–15,000 GE</p>
+      <p class="tiny"><span class="accent">Throughput:</span> ~5–15 Gbps</p>
+      <p class="tiny"><span class="accent">Latency:</span> 20–40 cycles</p>
+      <p class="tiny dim">Balances area and speed</p>
+    </div>
+    <div class="box">
+      <h3 style="color:var(--accent3);">Fully Unrolled + Pipelined</h3>
+      <p class="tiny">All 10/14 rounds instantiated in hardware</p>
+      <p class="tiny"><span class="accent">Area:</span> ~50,000–170,000 GE</p>
+      <p class="tiny"><span class="accent">Throughput:</span> ~30–53 Gbps</p>
+      <p class="tiny"><span class="accent">Latency:</span> 10–14 cycles</p>
+      <p class="tiny dim">Maximum throughput for network &amp; SoC</p>
+    </div>
+  </div>
+  <div style="margin-top:0.8em;">
+    <table class="clean" style="font-size:0.55em;">
+      <tr><th>Architecture</th><th>Platform</th><th>Area</th><th>Throughput</th><th>Efficiency (Gbps/kGE)</th></tr>
+      <tr><td>8-bit serial</td><td>180nm ASIC</td><td>~3.1 kGE</td><td>~80 Mbps</td><td>0.026</td></tr>
+      <tr><td>Iterative 128-bit</td><td>Virtex-5 FPGA</td><td>1,364 slices</td><td>3.2 Gbps</td><td>—</td></tr>
+      <tr><td>Sub-pipelined</td><td>Virtex-6 FPGA</td><td>2,100 slices</td><td>12.8 Gbps</td><td>—</td></tr>
+      <tr><td>Composite-field (Mathew et al.)</td><td>45nm ASIC</td><td>56 kGE</td><td>53 Gbps</td><td>0.946</td></tr>
+    </table>
+  </div>
+  <p class="ref">Mathew et al., "53 Gbps AES" IEEE JSSC 2011 · Chodowiec &amp; Gaj, "Very Compact FPGA AES" (2003)</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 18: S-box HARDWARE — COMPOSITE FIELD -->
+<!-- ============================================================ -->
+<section>
+  <h2>S-box Hardware — Composite Fields</h2>
+  <p class="small">The S-box is the most expensive block in AES hardware. Two main approaches exist.</p>
+  <div class="two-col" style="margin-top:0.5em;">
+    <div>
+      <h3>LUT-Based (ROM/BRAM)</h3>
+      <div class="box">
+        <p class="small">Store the 256×8-bit table directly:</p>
+        <p class="small">✓ Simple — direct memory lookup</p>
+        <p class="small">✓ FPGA: fits in one 18Kb BRAM</p>
+        <p class="small dim">✗ 16 S-boxes needed → 16 BRAMs per round</p>
+        <p class="small dim">✗ Larger area on ASIC</p>
+        <p class="small dim">✗ Susceptible to power side-channels</p>
+      </div>
+    </div>
+    <div>
+      <h3>Composite-Field (GF((2⁴)²))</h3>
+      <div class="box">
+        <p class="small">Decompose GF(2<sup>8</sup>) into tower field GF((2<sup>4</sup>)²):</p>
+        <p class="small">Inversion in GF(2<sup>8</sup>) → operations in GF(2<sup>4</sup>)</p>
+        <p class="small accent2">✓ ~20% fewer gates (Canright, 2005)</p>
+        <p class="small accent2">✓ Used in Intel AES-NI hardware</p>
+        <p class="small accent2">✓ Better for ASIC — pure logic</p>
+        <p class="small dim">✗ More complex design verification</p>
+      </div>
+    </div>
+  </div>
+  <div class="highlight-box" style="margin-top:0.5em;text-align:center;">
+    <span class="small"><span class="accent">Canright's S-box:</span> Only 92 GE per S-box using GF(2²) subfield decomposition — the most compact known.</span>
+  </div>
+  <div class="box" style="margin-top:0.5em;">
+    <h3>Tower Field Decomposition</h3>
+    <p class="small">
+      <span class="mono">GF(2<sup>8</sup>)</span> → isomorphic to <span class="mono">GF((2<sup>4</sup>)<sup>2</sup>)</span> → further to <span class="mono">GF(((2<sup>2</sup>)<sup>2</sup>)<sup>2</sup>)</span><br/>
+      Each inversion reduces to multiplications and squarings in progressively smaller subfields, eventually reaching GF(2²) where inversion is just XOR + AND gates.
+    </p>
+  </div>
+  <p class="ref">Canright, "A Very Compact Rijndael S-box" (2005) · Mathew et al., IEEE JSSC (2011)</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 19: MODES OF OPERATION -->
+<!-- ============================================================ -->
+<section>
+  <h2>Modes of Operation</h2>
+  <p class="small">AES is a block cipher (128-bit). To encrypt arbitrary-length data, use a <span class="accent">mode of operation</span>.</p>
+  <div class="three-col" style="margin-top:0.5em;">
+    <div class="box">
+      <h3 style="color:var(--accent4);">ECB</h3>
+      <p class="tiny">Each block encrypted independently</p>
+      <p class="tiny accent4">✗ Deterministic — reveals patterns</p>
+      <p class="tiny accent4">✗ Never use for real data</p>
+    </div>
+    <div class="box">
+      <h3 style="color:#60a5fa;">CBC</h3>
+      <p class="tiny">Each block XORed with previous ciphertext</p>
+      <p class="tiny">✓ Widely deployed (TLS ≤1.2)</p>
+      <p class="tiny dim">✗ Sequential — can't parallelize encryption</p>
+      <p class="tiny dim">✗ Padding oracle attacks</p>
+    </div>
+    <div class="box">
+      <h3 style="color:var(--accent2);">CTR</h3>
+      <p class="tiny">Encrypt counter → XOR with plaintext</p>
+      <p class="tiny">✓ Fully parallelizable</p>
+      <p class="tiny">✓ Encryption-only hardware needed</p>
+      <p class="tiny dim">✗ No integrity protection</p>
+    </div>
+  </div>
+  <div class="two-col" style="margin-top:0.5em;">
+    <div class="box" style="border-color:rgba(16,185,129,.4);">
+      <h3 style="color:var(--accent2);">GCM (Galois/Counter Mode) ★</h3>
+      <p class="small">CTR encryption + GHASH authentication</p>
+      <p class="small">✓ Authenticated encryption (AEAD)</p>
+      <p class="small">✓ Fully parallelizable</p>
+      <p class="small">✓ Hardware-friendly — GHASH uses GF(2<sup>128</sup>)</p>
+      <p class="small accent2">The standard choice for TLS 1.3, IPsec, SSH</p>
+    </div>
+    <div class="box">
+      <h3 style="color:var(--accent3);">Other Notable Modes</h3>
+      <p class="small"><span class="accent3">XTS</span> — Tweakable, used for disk encryption</p>
+      <p class="small"><span class="accent3">CCM</span> — CTR + CBC-MAC, used in Wi-Fi (WPA2/3)</p>
+      <p class="small"><span class="accent3">SIV</span> — Nonce-misuse resistant AEAD</p>
+      <p class="small"><span class="accent3">GCM-SIV</span> — Nonce-misuse resistant GCM variant</p>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 20: SIDE-CHANNEL ATTACKS -->
+<!-- ============================================================ -->
+<section>
+  <h2>Side-Channel Attacks on AES</h2>
+  <div class="two-col">
+    <div>
+      <h3>Attack Vectors</h3>
+      <div class="box">
+        <p><span class="badge badge-red">TIMING</span></p>
+        <p class="small">T-table cache access patterns reveal key-dependent indices. Bernstein's attack (2005) recovers full AES-256 key from network timing.</p>
+      </div>
+      <div class="box">
+        <p><span class="badge badge-red">POWER / EM</span></p>
+        <p class="small"><em>Differential Power Analysis (DPA)</em> — correlate power traces with hypothetical S-box outputs across many encryptions.</p>
+        <p class="small">Target: first or last round SubBytes, where known plaintext/ciphertext meets key.</p>
+      </div>
+      <div class="box">
+        <p><span class="badge badge-red">FAULT</span></p>
+        <p class="small"><em>Differential Fault Analysis (DFA)</em> — inject faults in round 8/9, compare correct/faulty ciphertexts → recover key.</p>
+        <p class="small">A single byte fault in round 9 can reduce key search to ~2<sup>32</sup>.</p>
+      </div>
+    </div>
+    <div>
+      <h3>Key Targets</h3>
+      <div class="box">
+        <p class="small">The <span class="accent3">S-box</span> is the primary target because:</p>
+        <p class="small">1. Only non-linear operation → strongest correlation with power</p>
+        <p class="small">2. Operates byte-by-byte → divide-and-conquer (16 × 2<sup>8</sup> vs 2<sup>128</sup>)</p>
+        <p class="small">3. T-table indices directly reveal key bytes</p>
+      </div>
+      <div class="box" style="margin-top:0.4em;">
+        <p class="small"><span class="accent">Combined attacks</span> exploit both fault injection and power analysis simultaneously, defeating higher-order masking countermeasures.</p>
+        <p class="small dim">Roche et al. (2011), Dassance &amp; Venelli (2012)</p>
+      </div>
+      <div class="box" style="margin-top:0.4em;">
+        <p class="small"><span class="accent">Cache attacks</span> — Flush+Reload, Prime+Probe on shared L3 cache can extract AES keys across VMs.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 21: COUNTERMEASURES -->
+<!-- ============================================================ -->
+<section>
+  <h2>Side-Channel Countermeasures</h2>
+  <div class="two-col">
+    <div>
+      <h3>Software Countermeasures</h3>
+      <div class="box">
+        <p><span class="badge badge-green">MASKING</span></p>
+        <p class="small">Split every sensitive variable into <em>d+1</em> random shares such that x = x₁ ⊕ x₂ ⊕ … ⊕ x<sub>d+1</sub></p>
+        <p class="small">d<sup>th</sup>-order masking requires d+1 shares; attacker must combine d+1 trace points.</p>
+      </div>
+      <div class="box" style="margin-top:0.3em;">
+        <p><span class="badge badge-green">SHUFFLING</span></p>
+        <p class="small">Randomize the order of S-box computations within a round (16 S-box calls can be permuted in 16! ways).</p>
+      </div>
+      <div class="box" style="margin-top:0.3em;">
+        <p><span class="badge badge-green">BITSLICING</span></p>
+        <p class="small">Compute S-box as Boolean circuit — constant time, no table lookups. 32 AES blocks in parallel on 32-bit CPU.</p>
+      </div>
+    </div>
+    <div>
+      <h3>Hardware Countermeasures</h3>
+      <div class="box">
+        <p><span class="badge badge-purple">DUAL-RAIL LOGIC</span></p>
+        <p class="small">Each bit represented as complementary pair (a, ā). Constant Hamming weight per operation.</p>
+      </div>
+      <div class="box" style="margin-top:0.3em;">
+        <p><span class="badge badge-purple">THRESHOLD IMPLEMENTATIONS</span></p>
+        <p class="small">Hardware secret sharing with provable glitch resistance. Each share processed by independent logic.</p>
+      </div>
+      <div class="box" style="margin-top:0.3em;">
+        <p><span class="badge badge-purple">REDUNDANCY (DFA defense)</span></p>
+        <p class="small">Temporal: encrypt twice, compare<br/>
+           Spatial: TMR (triple modular redundancy)<br/>
+           Inverse check: decrypt ciphertext, compare with plaintext</p>
+      </div>
+      <div class="box" style="margin-top:0.3em;">
+        <p><span class="badge badge-purple">NOISE INJECTION</span></p>
+        <p class="small">Random delays, dummy operations, clock jitter to decorrelate power traces.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 22: PYTHON IMPLEMENTATION -->
+<!-- ============================================================ -->
+<section>
+  <h2>Python Implementation <span class="dim small">(AES-128)</span></h2>
+<pre><code class="language-python">SBOX = [
+    0x63,0x7c,0x77,0x7b,0xf2,0x6b,0x6f,0xc5,0x30,0x01,0x67,0x2b,0xfe,0xd7,0xab,0x76,
+    0xca,0x82,0xc9,0x7d,0xfa,0x59,0x47,0xf0,0xad,0xd4,0xa2,0xaf,0x9c,0xa4,0x72,0xc0,
+    # ... full 256-entry table ...
+]
+RCON = [0x01,0x02,0x04,0x08,0x10,0x20,0x40,0x80,0x1b,0x36]
+
+def xtime(a):            return ((a << 1) ^ 0x1B) & 0xFF if a & 0x80 else (a << 1) & 0xFF
+def gf_mul(a, b):        # multiply in GF(2^8) via repeated xtime
+    p = 0
+    for _ in range(8):
+        if b & 1: p ^= a
+        a = xtime(a); b >>= 1
+    return p
+
+def sub_bytes(state):    return [SBOX[b] for b in state]
+def shift_rows(s):       return [s[0],s[5],s[10],s[15], s[4],s[9],s[14],s[3],
+                                 s[8],s[13],s[2],s[7],   s[12],s[1],s[6],s[11]]
+def mix_columns(s):
+    r = []
+    for c in range(4):
+        i = c * 4
+        r += [gf_mul(2,s[i])^gf_mul(3,s[i+1])^s[i+2]^s[i+3],
+              s[i]^gf_mul(2,s[i+1])^gf_mul(3,s[i+2])^s[i+3],
+              s[i]^s[i+1]^gf_mul(2,s[i+2])^gf_mul(3,s[i+3]),
+              gf_mul(3,s[i])^s[i+1]^s[i+2]^gf_mul(2,s[i+3])]
+    return r
+
+def add_round_key(s, k):  return [a ^ b for a, b in zip(s, k)]
+
+def aes_encrypt(plaintext, key):  # both 16-byte lists
+    state = add_round_key(plaintext, key[:16])
+    rkeys = key_expansion(key)     # returns list of 11 × 16-byte round keys
+    for r in range(1, 10):
+        state = sub_bytes(state)
+        state = shift_rows(state)
+        state = mix_columns(state)
+        state = add_round_key(state, rkeys[r])
+    state = sub_bytes(state)
+    state = shift_rows(state)
+    state = add_round_key(state, rkeys[10])
+    return state</code></pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 23: SYSTEMVERILOG IMPLEMENTATION -->
+<!-- ============================================================ -->
+<section>
+  <h2>SystemVerilog — AES Round</h2>
+<pre><code class="language-verilog">module aes_round (
+    input  logic [127:0] state_in,
+    input  logic [127:0] round_key,
+    input  logic         last_round,  // skip MixColumns if high
+    output logic [127:0] state_out
+);
+
+    logic [127:0] after_sub, after_shift, after_mix;
+
+    // ---- SubBytes: 16 parallel S-box instances ----
+    genvar i;
+    generate
+        for (i = 0; i < 16; i++) begin : g_sbox
+            aes_sbox u_sbox (
+                .in  (state_in[8*i +: 8]),
+                .out (after_sub[8*i +: 8])
+            );
+        end
+    endgenerate
+
+    // ---- ShiftRows: wire-level byte permutation ----
+    assign after_shift = {
+        after_sub[127:120], after_sub[ 87: 80], after_sub[ 47: 40], after_sub[  7:  0],
+        after_sub[ 95: 88], after_sub[ 55: 48], after_sub[ 15:  8], after_sub[103: 96],
+        after_sub[ 63: 56], after_sub[ 23: 16], after_sub[111:104], after_sub[ 71: 64],
+        after_sub[ 31: 24], after_sub[119:112], after_sub[ 79: 72], after_sub[ 39: 32]
+    };
+
+    // ---- MixColumns: 4 column mixers ----
+    generate
+        for (i = 0; i < 4; i++) begin : g_mix
+            aes_mix_column u_mix (
+                .col_in  (after_shift[32*i +: 32]),
+                .col_out (after_mix[32*i +: 32])
+            );
+        end
+    endgenerate
+
+    // ---- AddRoundKey ----
+    assign state_out = (last_round ? after_shift : after_mix) ^ round_key;
+
+endmodule</code></pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 24: PERFORMANCE COMPARISON -->
+<!-- ============================================================ -->
+<section>
+  <h2>Performance Landscape</h2>
+  <table class="clean">
+    <tr><th>Platform</th><th>Implementation</th><th>Throughput</th><th>Latency</th><th>Notes</th></tr>
+    <tr>
+      <td>8-bit AVR</td><td>Byte-serial, table S-box</td>
+      <td class="mono">~1.5 Mbps</td><td>~2,700 cycles</td><td class="dim">IoT / smart cards</td>
+    </tr>
+    <tr>
+      <td>ARM Cortex-M4</td><td>Bitsliced</td>
+      <td class="mono">~45 Mbps</td><td>~480 cycles</td><td class="dim">Embedded</td>
+    </tr>
+    <tr>
+      <td>x86 (no AES-NI)</td><td>T-table, OpenSSL</td>
+      <td class="mono">~3.2 Gbps</td><td>~160 cycles</td><td class="dim">Software, 4 GHz</td>
+    </tr>
+    <tr>
+      <td>x86 (AES-NI)</td><td>AESENC pipeline</td>
+      <td class="mono accent2">~8 Gbps</td><td>~40 cycles</td><td class="dim">Single-core CTR</td>
+    </tr>
+    <tr>
+      <td>Virtex-5 FPGA</td><td>Iterative 128-bit</td>
+      <td class="mono">~3.2 Gbps</td><td>11 cycles</td><td class="dim">1,364 slices</td>
+    </tr>
+    <tr>
+      <td>Virtex-7 FPGA</td><td>Full pipeline</td>
+      <td class="mono accent2">~24 Gbps</td><td>11 cycles</td><td class="dim">~4,200 slices</td>
+    </tr>
+    <tr>
+      <td>45nm ASIC</td><td>Composite S-box, full pipeline</td>
+      <td class="mono accent2">~53 Gbps</td><td>10 cycles</td><td class="dim">56 kGE, Mathew et al.</td>
+    </tr>
+    <tr>
+      <td>CUDA GPU</td><td>Parallel ECB/CTR</td>
+      <td class="mono accent2">~135 Gbps</td><td>—</td><td class="dim">RTX 4090, batch mode</td>
+    </tr>
+  </table>
+  <div class="highlight-box" style="margin-top:0.5em;text-align:center;">
+    <span class="small">From smart card (<span class="mono">1.5 Mbps</span>) to GPU (<span class="mono">135 Gbps</span>) — a <span class="accent">90,000×</span> throughput range. AES was designed for this versatility.</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 25: CRYPTANALYSIS STATUS -->
+<!-- ============================================================ -->
+<section>
+  <h2>Cryptanalysis Status <span class="dim small">(2025)</span></h2>
+  <div class="two-col">
+    <div>
+      <h3>Best Known Attacks</h3>
+      <div class="box">
+        <p><span class="accent">Biclique attack</span> (Bogdanov et al., 2011)</p>
+        <p class="small">AES-128: 2<sup>126.1</sup> &emsp; AES-192: 2<sup>189.7</sup> &emsp; AES-256: 2<sup>254.4</sup></p>
+        <p class="small dim">Negligible improvement over brute force — 3–4 bit gain.</p>
+      </div>
+      <div class="box" style="margin-top:0.4em;">
+        <p><span class="accent">Related-key attacks</span> (Biryukov &amp; Khovratovich, 2009)</p>
+        <p class="small">AES-256: 2<sup>99.5</sup> (chosen related keys)</p>
+        <p class="small dim">Impractical — requires attacker to choose related keys. Addressed in key schedule design.</p>
+      </div>
+      <div class="box" style="margin-top:0.4em;">
+        <p><span class="accent">Square / integral attacks</span></p>
+        <p class="small">Effective up to 6–7 rounds. Full AES (10+ rounds) has comfortable security margin.</p>
+      </div>
+    </div>
+    <div>
+      <h3>Security Assessment</h3>
+      <div class="box" style="border-color:rgba(16,185,129,.4);">
+        <p class="accent2" style="font-size:1.1em;font-weight:700;">AES remains unbroken</p>
+        <p class="small">No practical attack reducing security below the intended level exists as of 2025.</p>
+      </div>
+      <h3 style="margin-top:0.5em;">Post-Quantum Consideration</h3>
+      <div class="box">
+        <p class="small"><span class="accent3">Grover's algorithm</span> reduces brute-force to 2<sup>n/2</sup>:</p>
+        <p class="small">AES-128 → ~2<sup>64</sup> quantum ops</p>
+        <p class="small">AES-256 → ~2<sup>128</sup> quantum ops</p>
+        <p class="small accent2">Recommendation: use AES-256 for quantum-resistant symmetric encryption.</p>
+        <p class="small dim">CNSA 2.0 (NSA) mandates AES-256.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 26: WHERE AES IS DEPLOYED -->
+<!-- ============================================================ -->
+<section>
+  <h2>Where AES Is Deployed</h2>
+  <div class="three-col">
+    <div class="box">
+      <h3 style="color:var(--accent);">Network Security</h3>
+      <p class="small">TLS 1.3 (AES-128/256-GCM)</p>
+      <p class="small">IPsec / IKEv2</p>
+      <p class="small">SSH</p>
+      <p class="small">WPA3 (AES-CCM, AES-GCMP)</p>
+      <p class="small">Signal Protocol (AES-256-CBC)</p>
+    </div>
+    <div class="box">
+      <h3 style="color:var(--accent2);">Storage Encryption</h3>
+      <p class="small">BitLocker (AES-XTS)</p>
+      <p class="small">FileVault 2 (AES-XTS-128)</p>
+      <p class="small">LUKS / dm-crypt</p>
+      <p class="small">Android FBE</p>
+      <p class="small">Self-Encrypting Drives (TCG Opal)</p>
+    </div>
+    <div class="box">
+      <h3 style="color:var(--accent3);">Hardware / SoC</h3>
+      <p class="small">Intel AES-NI (Westmere+)</p>
+      <p class="small">ARM Crypto Extensions (v8-A+)</p>
+      <p class="small">RISC-V Zkn extension</p>
+      <p class="small">Qualcomm Inline Crypto Engine</p>
+      <p class="small">Apple Secure Enclave</p>
+    </div>
+  </div>
+  <div class="highlight-box" style="margin-top:0.5em;text-align:center;">
+    <span class="small">AES encrypts virtually all internet traffic, disk storage, and mobile communications worldwide. It is the most widely deployed symmetric cipher in history.</span>
+  </div>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 27: DESIGN PHILOSOPHY RECAP -->
+<!-- ============================================================ -->
+<section>
+  <h2>Design Philosophy</h2>
+  <p class="small">Daemen &amp; Rijmen's three core principles:</p>
+  <div class="three-col" style="margin-top:0.5em;">
+    <div class="box" style="text-align:center;">
+      <p style="font-size:2em;">🔬</p>
+      <h3 style="color:var(--accent);">Resistance to Attacks</h3>
+      <p class="small">S-box from GF(2<sup>8</sup>) inverse — optimal non-linearity. MDS matrix for max diffusion. Wide trail strategy provides provable bounds against differential and linear cryptanalysis.</p>
+    </div>
+    <div class="box" style="text-align:center;">
+      <p style="font-size:2em;">⚡</p>
+      <h3 style="color:var(--accent2);">Performance &amp; Efficiency</h3>
+      <p class="small">T-table fusion for 32-bit CPUs. Byte-oriented for 8-bit µC. Wire-only ShiftRows. Simple xtime() for MixColumns. Parallelizable key schedule.</p>
+    </div>
+    <div class="box" style="text-align:center;">
+      <p style="font-size:2em;">📐</p>
+      <h3 style="color:var(--accent3);">Simplicity &amp; Transparency</h3>
+      <p class="small">No secret design constants — everything derived from mathematical first principles. Simple algebraic structure enables thorough analysis and prevents suspicion of trapdoors.</p>
+    </div>
+  </div>
+  <p class="ref">Daemen &amp; Rijmen, "The Design of Rijndael" (Springer, 2002) ch. 5–9</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- SLIDE 28: REFERENCES -->
+<!-- ============================================================ -->
+<section>
+  <h2>References</h2>
+  <div class="two-col small">
+    <div>
+      <p><span class="accent">Standards</span></p>
+      <p class="dim">FIPS 197 — Advanced Encryption Standard (AES), NIST, 2001</p>
+      <p class="dim">NIST SP 800-38A — Modes of Operation</p>
+      <p class="dim">NIST SP 800-38D — GCM Recommendation</p>
+      <p class="dim">CNSA 2.0 — NSA Quantum-Resistant Algorithm Suite</p>
+      <p style="margin-top:0.5em;"><span class="accent">Design &amp; Theory</span></p>
+      <p class="dim">Daemen &amp; Rijmen, "The Design of Rijndael" (Springer, 2002)</p>
+      <p class="dim">Daemen &amp; Rijmen, AES Proposal: Rijndael v2 (1999)</p>
+      <p class="dim">Shannon, "Communication Theory of Secrecy Systems" (1949)</p>
+    </div>
+    <div>
+      <p><span class="accent">Hardware</span></p>
+      <p class="dim">Canright, "A Very Compact Rijndael S-box" (2005)</p>
+      <p class="dim">Mathew et al., "53 Gbps AES in 45nm" IEEE JSSC (2011)</p>
+      <p class="dim">Gaj &amp; Chodowiec, "FPGA and ASIC Implementations of AES" in Cryptographic Engineering (2009)</p>
+      <p style="margin-top:0.5em;"><span class="accent">Cryptanalysis &amp; Side-Channels</span></p>
+      <p class="dim">Bogdanov et al., "Biclique Cryptanalysis of AES" (ASIACRYPT 2011)</p>
+      <p class="dim">Biryukov &amp; Khovratovich, "Related-Key Attacks on AES-256" (CRYPTO 2009)</p>
+      <p class="dim">Bernstein, "Cache-Timing Attacks on AES" (2005)</p>
+      <p class="dim">Kocher et al., "Differential Power Analysis" (CRYPTO 1999)</p>
+    </div>
+  </div>
+  <p class="tiny dim" style="text-align:center;margin-top:1em;">
+    Part of the <a href="../index.html" style="color:var(--accent);">Modern Cryptography Presentation Series</a>
+  </p>
+</section>
+
+</div><!-- /slides -->
+</div><!-- /reveal -->
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/reveal.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/4.6.1/plugin/highlight/highlight.min.js"></script>
+<script>
+Reveal.initialize({
+  hash: true,
+  slideNumber: 'c/t',
+  showSlideNumber: 'all',
+  transition: 'slide',
+  transitionSpeed: 'default',
+  backgroundTransition: 'fade',
+  center: true,
+  width: 1280,
+  height: 720,
+  margin: 0.06,
+  plugins: [ RevealHighlight ]
+});
+</script>
+</body>
+</html>
