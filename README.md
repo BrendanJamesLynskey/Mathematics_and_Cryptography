@@ -126,6 +126,32 @@ Interactive slide decks covering modern cryptographic systems end-to-end — fro
 
 ---
 
+## Coding Theory
+
+Interactive slide decks on error detection and error correction — from parity bits and Hamming codes through Reed-Solomon, turbo codes, LDPC, and polar codes.
+
+### [Open the Coding Theory Series Landing Page](https://brendanjameslynskey.github.io/Coding/)
+
+### Presentations
+
+| # | Topic | Slides | Status |
+| --- | --- | --- | --- |
+| 01 | Foundations of Coding Theory | ~25 | ✅ Complete |
+| 02 | Parity Checks & Simple Codes | ~22 | ✅ Complete |
+| 03 | Hamming Codes | ~25 | ✅ Complete |
+| 04 | CRC & Error Detection | ~22 | ✅ Complete |
+| 05 | Linear Block Codes | ~24 | ✅ Complete |
+| 06 | Convolutional Codes & Viterbi Decoding | ~25 | ✅ Complete |
+| 07 | BCH Codes | ~22 | ✅ Complete |
+| 08 | Reed-Solomon Codes | ~28 | ✅ Complete |
+| 09 | Turbo Codes & Iterative Decoding | ~24 | ✅ Complete |
+| 10 | LDPC Codes | ~24 | ✅ Complete |
+| 11 | Fountain & Rateless Codes | ~20 | ✅ Complete |
+| 12 | Polar Codes | ~22 | ✅ Complete |
+| 13 | Coding in Practice — Real-World Systems | ~26 | ✅ Complete |
+
+---
+
 ## License
 
 Educational use. Code examples provided as-is. Standards references are to publicly available NIST, IETF, and ISO documents.
