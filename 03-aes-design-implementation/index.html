@@ -163,6 +163,13 @@
   }
   .glow { animation: pulse-glow 2s ease-in-out infinite; }
 .reveal .slides > section { overflow-y: auto !important; align-items: flex-start !important; justify-content: flex-start !important; }
+/* --- matrix bracket rendering --- */
+.mat { display:inline-flex; align-items:stretch; vertical-align:middle; }
+.mat-bl, .mat-br { width:7px; flex-shrink:0; }
+.mat-bl { border:2px solid currentColor; border-right:none; border-radius:3px 0 0 3px; margin-right:2px; }
+.mat-br { border:2px solid currentColor; border-left:none; border-radius:0 3px 3px 0; margin-left:2px; }
+.mat table { border-collapse:collapse; }
+.mat td { padding:0.08em 0.35em; text-align:center; white-space:nowrap; line-height:1.5; }
 </style>
 </head>
 
@@ -547,12 +554,29 @@
     <div>
       <h3>Matrix Multiplication in GF(2<sup>8</sup>)</h3>
       <div class="box" style="text-align:center;font-family:var(--r-code-font);font-size:0.8em;">
-        <p>
-          ⎡ <span class="accent">02</span>&nbsp;<span class="accent2">03</span>&nbsp;01&nbsp;01 ⎤ &emsp; ⎡ S₀ ⎤<br/>
-          ⎢ 01&nbsp;<span class="accent">02</span>&nbsp;<span class="accent2">03</span>&nbsp;01 ⎥ &emsp; ⎢ S₁ ⎥<br/>
-          ⎢ 01&nbsp;01&nbsp;<span class="accent">02</span>&nbsp;<span class="accent2">03</span> ⎥ · ⎢ S₂ ⎥<br/>
-          ⎣ <span class="accent2">03</span>&nbsp;01&nbsp;01&nbsp;<span class="accent">02</span> ⎦ &emsp; ⎣ S₃ ⎦
-        </p>
+        <div style="display:inline-flex;align-items:center;gap:0.6em;">
+          <div class="mat">
+            <span class="mat-bl"></span>
+            <table>
+              <tr><td><span class="accent">02</span></td><td><span class="accent2">03</span></td><td>01</td><td>01</td></tr>
+              <tr><td>01</td><td><span class="accent">02</span></td><td><span class="accent2">03</span></td><td>01</td></tr>
+              <tr><td>01</td><td>01</td><td><span class="accent">02</span></td><td><span class="accent2">03</span></td></tr>
+              <tr><td><span class="accent2">03</span></td><td>01</td><td>01</td><td><span class="accent">02</span></td></tr>
+            </table>
+            <span class="mat-br"></span>
+          </div>
+          <span>·</span>
+          <div class="mat">
+            <span class="mat-bl"></span>
+            <table>
+              <tr><td>S<sub>0</sub></td></tr>
+              <tr><td>S<sub>1</sub></td></tr>
+              <tr><td>S<sub>2</sub></td></tr>
+              <tr><td>S<sub>3</sub></td></tr>
+            </table>
+            <span class="mat-br"></span>
+          </div>
+        </div>
       </div>
       <p class="small" style="margin-top:0.5em;">
         Only uses coefficients <span class="mono accent">01</span>, <span class="mono accent">02</span>, <span class="mono accent">03</span>:
